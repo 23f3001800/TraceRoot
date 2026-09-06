@@ -54,9 +54,12 @@ def execute_tests(context, args: list[str], timeout: int) -> ToolResult:
                 data["failing_tests"] = sorted({r["node_id"] for r in report["records"] if r["outcome"] == "failed"})
                 data["http_observations"] = [r["http_observation"] for r in report["records"] if "http_observation" in r]
                 context.store_logs(report["logs"], run_id)
-                if process.exit_code == 0 and report["collected"] > 0:
+                if process.exit_code == 0 and report["passed"] > 0 and not report["errors"] and not report["failed"]:
                     data["outcome"] = "passed"
                     result = ToolResult("ok", data)
+                elif process.exit_code == 0:
+                    data["outcome"] = "not_exercised"
+                    result = ToolResult("unavailable", data, ToolError("tests_not_exercised", "No selected test actually passed or failed."))
                 elif process.exit_code == 1 and report["failed"] > 0 and not report["errors"]:
                     data["outcome"] = "failed"
                     result = ToolResult("ok", data)

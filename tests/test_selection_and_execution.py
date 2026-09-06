@@ -73,3 +73,20 @@ def test_timeout_removes_container(context, monkeypatch):
     result = module.execute_tests(context, ["tests"], 1)
     assert result.status == "timeout"
     assert any(call[:2] == ["rm", "-f"] for call in calls)
+
+
+def test_skipped_reproduction_is_not_success(context, monkeypatch):
+    import json
+    import traceroot.execution as execution
+    from traceroot.process import ProcessResult
+    context.config.update(active=True, image="image", db="db", network="network")
+    report = {"exit_code": 0, "collected": 1, "passed": 0, "failed": 0, "skipped": 1,
+              "errors": 0, "records": [], "logs": []}
+    monkeypatch.setattr(execution, "checked", lambda *args, **kw: None)
+    def fake_docker(ctx, args, *rest, **kwargs):
+        output = ("TRACEROOT_REPORT_V1=" + json.dumps(report)).encode() if args[0] == "start" else b""
+        return ProcessResult(0, output, b"", 1, False, False, False)
+    monkeypatch.setattr(execution, "docker", fake_docker)
+    result = run_reproduction(context, context.repository.source)
+    assert result.status == "unavailable" and result.data["reproduced"] is None
+    assert result.error.code == "tests_not_exercised"

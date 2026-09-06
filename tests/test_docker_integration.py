@@ -42,6 +42,14 @@ def test_live_database_operations(live):
                             filters={"product_name": "' OR 1=1; DELETE FROM orders; --"}, limit=1)
     assert rows.status == "ok" and rows.data["rows"] == []
     assert constraints.data["role"] == "inspection" and constraints.data["transaction_read_only"]
+    # Prove privilege drift causes the inspection tool to fail closed.
+    sql_command = ["exec", live.config["db"], "psql", "-U", "postgres", "-d", "investigation",
+                   "-v", "ON_ERROR_STOP=1", "-c"]
+    try:
+        checked(live, [*sql_command, "GRANT UPDATE ON public.orders TO inspection"])
+        assert inspect_database(live, "list_constraints", table="orders").status == "rejected"
+    finally:
+        checked(live, [*sql_command, "REVOKE UPDATE ON public.orders FROM inspection"])
 
 def test_database_role_denies_writes_without_transaction_safety(live):
     # Trusted negative test: bypass the tool's read-only transaction to verify role permissions independently.

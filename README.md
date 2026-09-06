@@ -10,6 +10,13 @@ TraceRoot lives here. Its standalone commerce target is a sibling repository at
 history. The original TraceRoot commits remain intact.
 
 See [tool design](docs/tool-design.md) and [input contract](docs/input-contract.md)
-for the initial read-only investigation interface. No tools or agents are
-implemented yet. Provide a sanitized target checkout to investigations; never
+for the initial read-only investigation interface. Six structured investigation tools are implemented. No agents or remediation tools are implemented. Provide a sanitized target checkout to investigations; never
 expose evaluator ground truth or the main repository's historical Git objects.
+
+## Tool layer
+
+Start with [your next steps](docs/your-next-steps.md) and [tool contracts](docs/tool-api.md).
+
+The [manual investigation](docs/manual-investigation-bug-001.md) records actual calls and evidence. Keep it hidden during future evaluations.
+
+TraceRoot runs untrusted target tests inside disposable containers. Source access and PostgreSQL inspection are read-only.

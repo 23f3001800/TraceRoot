@@ -1,5 +1,7 @@
 # TraceRoot v1 tool design
 
+Implementation contracts and current limits: [tool API](tool-api.md). Operator walkthrough: [your next steps](your-next-steps.md).
+
 ## run_reproduction
 
 **Tool name:** run_reproduction

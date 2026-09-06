@@ -11,7 +11,7 @@ python3 -m venv .venv
 .venv/bin/python -m pytest -q
 ```
 
-The ordinary suite runs 52 checks; four Docker integration checks skip without a prepared session.
+The ordinary suite runs 51 checks; four Docker integration checks skip without a prepared session.
 
 ## 2. Prepare a disposable environment
 
@@ -75,7 +75,7 @@ For the full suite, omit test_selector. For a filtered suite, supply marker="not
 TRACEROOT_TEST_SESSION="$SESSION" .venv/bin/python -m pytest -q
 ```
 
-Expected: 56 passing TraceRoot tests. The target application's intentional failure is observed separately through run_tests.
+Expected: 55 passing TraceRoot tests. The target application's intentional failure is observed separately through run_tests.
 
 ## 7. Review the trace, then clean up
 
@@ -88,5 +88,3 @@ Read manual-investigation-bug-001.md after your own investigation. It contains t
 Cleanup removes session containers and network; database tmpfs disappears. Private evidence and the reusable image remain locally.
 
 Your responsibility: start Docker, run these commands, and review the evidence. Implementation, isolation checks, and the recorded investigation are complete.
-
-Session files contain disposable credentials; keep .traceroot-runs private.

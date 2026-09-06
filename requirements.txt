@@ -1,0 +1,5 @@
+FastAPI
+PostgreSQL
+Docker
+pytest
+Git

@@ -44,9 +44,9 @@ def test_directory_symlink_rejected(context, tmp_path):
     outside = tmp_path / "outside"
     outside.mkdir()
     (outside / "entry.py").write_text("PRIVATE")
-    (context.repository.root / "alias").symlink_to(outside, target_is_directory=True)
+    (context.repository.root / "app/alias").symlink_to(outside, target_is_directory=True)
     with pytest.raises(ToolFailure):
-        safe_bytes(context.repository.root, "alias/entry.py")
+        safe_bytes(context.repository.root, "app/alias/entry.py")
 
 def test_snapshot_integrity(context):
     (context.repository.root / "app/main.py").write_text("modified")

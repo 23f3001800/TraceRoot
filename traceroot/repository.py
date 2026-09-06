@@ -14,7 +14,7 @@ def relative_path(value: str, allow_dot: bool = False) -> str:
     if not isinstance(value, str) or not value or "\\" in value or ":" in value:
         raise ToolFailure("path_denied", "Path is outside the public repository scope.")
     path = PurePosixPath(value)
-    if path.is_absolute() or ".." in path.parts or any(part in BLOCKED or part.startswith(".env") for part in path.parts):
+    if path.is_absolute() or ".." in path.parts or any(part.casefold() in BLOCKED or part.casefold().startswith(".env") for part in path.parts):
         raise ToolFailure("path_denied", "Path is outside the public repository scope.")
     if str(path) == "." and not allow_dot:
         raise ToolFailure("path_denied", "A file path is required.")
@@ -24,7 +24,7 @@ def public_file(relative: str) -> bool:
     path = PurePosixPath(relative)
     return relative in CONFIGS or (
         path.parts[0] in {"app", "tests"} and path.suffix == ".py"
-        and not any(p in BLOCKED or p.startswith(".") for p in path.parts)
+        and not any(p.casefold() in BLOCKED or p.startswith(".") for p in path.parts)
     )
 
 def safe_bytes(root: Path, relative: str) -> bytes:
@@ -67,8 +67,14 @@ def safe_bytes(root: Path, relative: str) -> bytes:
 
 def public_files(root: Path) -> list[str]:
     paths = []
+    visited = 0
     for base, dirs, files in os.walk(root, followlinks=False):
-        dirs[:] = sorted(d for d in dirs if d not in BLOCKED and not d.startswith(".")
+        visited += 1
+        if visited > 2000:
+            raise ToolFailure("repository_too_large", "Public repository exceeds the directory limit.")
+        if Path(base) == root:
+            dirs[:] = [d for d in dirs if d in {"app", "tests"}]
+        dirs[:] = sorted(d for d in dirs if d.casefold() not in BLOCKED and not d.startswith(".")
                          and not (Path(base) / d).is_symlink())
         for name in sorted(files):
             p = Path(base) / name

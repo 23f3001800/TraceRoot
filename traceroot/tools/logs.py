@@ -34,6 +34,9 @@ def read_logs(context, source: str = "application", start_time: str | None = Non
     if source != "application":
         raise ToolFailure("source_denied", "Only the registered application log source is available.")
     bounded_int(limit, 1, 100, "limit")
+    for identifier in (request_id, run_id):
+        if identifier is not None and (not isinstance(identifier, str) or not 1 <= len(identifier) <= 128):
+            raise ToolFailure("invalid_identifier", "Correlation identifiers must contain 1 to 128 characters.")
     start = parse_time(start_time) if start_time else None
     end = parse_time(end_time) if end_time else None
     if start and end and start > end:
@@ -81,7 +84,7 @@ def read_logs(context, source: str = "application", start_time: str | None = Non
         used += len(serialized.encode())
         result.append(entry)
     data = {"source": source, "collected_at": utc_now(), "entries": result,
-            "truncated": len(result) < len(entries), "missing_fields": missing[:100],
+            "truncated": len(result) < len(entries) or len(missing) > 100 or len(collector_errors) > 100, "missing_fields": missing[:100],
             "collector_errors": collector_errors[:100]}
     if collector_errors:
         from ..contracts import ToolError

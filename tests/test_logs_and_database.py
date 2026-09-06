@@ -37,6 +37,7 @@ def test_log_missing_and_redaction(context):
 def test_logs_denied_source_and_timezone(context):
     assert read_logs(context, source="/etc/passwd").status == "rejected"
     assert read_logs(context, start_time="2026-09-06").status == "rejected"
+    assert read_logs(context, request_id=123).status == "rejected"
 
 @pytest.mark.parametrize("operation", ["INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "TRUNCATE", "SELECT * FROM orders"])
 def test_database_arbitrary_sql_denied(context, operation):

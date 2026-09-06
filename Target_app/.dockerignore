@@ -1,0 +1,6 @@
+.env
+.venv
+__pycache__
+.pytest_cache
+.git
+benchmarks/bug-001/stable-v1.tar.gz

@@ -1,31 +1,77 @@
-from google import genai
-from openai import OpenAI
+import json
+import os
+from pathlib import Path
+from dataclasses import dataclass
+from .config import LLMConfig
 
-class LLMProvider:
-    def __init__(self, provider: str = "gemini"):
-        self.provider = provider.lower()
-        if self.provider == "gemini":
-            self.client = genai.Client()
-        elif self.provider == "openrouter":
-            self.client = OpenAI()
-        else:
-            raise ValueError(f"Unsupported provider: {provider}")
+class ModelFailure(Exception):
+    def __init__(self, code: str, message: str):
+        self.code, self.message = code, message
+        super().__init__(message)
 
-    def generate_content(self, model: str, contents: list):
-        if self.provider == "gemini":
-            return self.client.models.generate_content(model=model, contents=contents)
-        elif self.provider == "openrouter":
-            # Assuming OpenRouter has a similar method for generating content
-            return self.client.chat.completions.create(model=model, messages=contents)
-    def get_model_info(self, model: str):
-        if self.provider == "gemini":
-            return self.client.models.get(model=model)
-        elif self.provider == "openrouter":
-            # Assuming OpenRouter has a method to get model info
-            return self.client.models.retrieve(model=model)
-    def stream_content(self, model: str, contents: list):
-        if self.provider == "gemini":
-            return self.client.models.stream_content(model=model, contents=contents)
-        elif self.provider == "openrouter":
-            # Assuming OpenRouter has a method to stream content
-            return self.client.chat.completions.stream(model=model, messages=contents)
+@dataclass
+class ModelReply:
+    decision: dict
+    usage: dict
+
+def load_api_key(env_file: Path | None = None) -> str:
+    key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if not key and env_file and env_file.is_file():
+        # Read only the explicitly selected credential; no shell execution or expansion.
+        for line in env_file.read_text().splitlines():
+            name, separator, value = line.partition("=")
+            if separator and name.strip() == "GEMINI_API_KEY":
+                key = value.strip()
+                if len(key) >= 2 and key[0] == key[-1] and key[0] in ("'", '"'):
+                    key = key[1:-1]
+                break
+    if not key:
+        raise ModelFailure("credential_missing", "Configure GEMINI_API_KEY in the environment or operator .env file.")
+    return key
+
+class GeminiProvider:
+    def __init__(self, config: LLMConfig, api_key: str):
+        self.config = config
+        self.api_key = api_key
+
+    def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
+        from google import genai
+        from google.genai import types
+        # No retries: every network attempt is visible to the runner's turn/time budget.
+        http = types.HttpOptions(timeout=max(1, int(timeout * 1000)),
+                                 retry_options=types.HttpRetryOptions(attempts=1))
+        try:
+            with genai.Client(api_key=self.api_key, http_options=http) as client:
+                response = client.models.generate_content(
+                    model=self.config.model_name,
+                    contents=[types.Content(role=m["role"], parts=[types.Part.from_text(text=m["text"])])
+                              for m in messages],
+                    config=types.GenerateContentConfig(
+                        system_instruction=system,
+                        response_mime_type="application/json",
+                        response_json_schema=schema,
+                        max_output_tokens=self.config.max_tokens,
+                        temperature=self.config.temperature,
+                        thinking_config=types.ThinkingConfig(
+                            thinking_budget=self.config.thinking_budget, include_thoughts=False),
+                    ),
+                )
+        except Exception as exc:
+            code = getattr(exc, "code", None)
+            # SDK error bodies can include credentials, payloads, or private model content.
+            raise ModelFailure("provider_error", f"Gemini request failed ({code or type(exc).__name__}).") from None
+        candidates = response.candidates or []
+        if not candidates or not candidates[0].content:
+            raise ModelFailure("empty_response", "Gemini returned no public decision.")
+        text = "".join(part.text or "" for part in candidates[0].content.parts or []
+                       if not getattr(part, "thought", False))
+        try:
+            decision = json.loads(text)
+        except (ValueError, TypeError):
+            raise ModelFailure("invalid_json", "Gemini returned an incomplete or invalid JSON decision.") from None
+        usage = response.usage_metadata
+        return ModelReply(decision, {
+            "input_tokens": getattr(usage, "prompt_token_count", 0) or 0,
+            "output_tokens": getattr(usage, "candidates_token_count", 0) or 0,
+            "thinking_tokens": getattr(usage, "thoughts_token_count", 0) or 0,
+        })

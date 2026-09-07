@@ -22,8 +22,38 @@ def main():
     inputs.add_argument("--input-file", type=Path, help="Operator-provided JSON input file")
     destroy = commands.add_parser("cleanup", help="Operator-only disposable environment cleanup")
     destroy.add_argument("--session", type=Path, required=True)
+
+    investigator = commands.add_parser("investigate", help="Run one bounded Gemini investigator")
+    investigator.add_argument("--session", type=Path, required=True)
+    investigator.add_argument("--task-file", type=Path, required=True)
+    investigator.add_argument("--env-file", type=Path, default=Path(".env"))
+    investigator.add_argument("--max-tool-calls", type=int, default=15)
+    investigator.add_argument("--max-seconds", type=int, default=300)
+    investigator.add_argument("--model-timeout", type=int, default=60)
+    commands.add_parser("tool-schemas", help="Print the six model-facing tool contracts")
     args = parser.parse_args()
     try:
+
+        if args.command == "tool-schemas":
+            from .agents.schemas import CATALOG
+            print(json.dumps(CATALOG, indent=2))
+            return 0
+        if args.command == "investigate":
+            from .agents.investigator import investigate, Budget
+            from .llms.config import LLMConfig
+            from .llms.provider import GeminiProvider, ModelFailure, load_api_key
+            try:
+                provider = GeminiProvider(LLMConfig(), load_api_key(args.env_file))
+                result = investigate(
+                    Context.load(args.session), json.loads(args.task_file.read_text()), provider,
+                    Budget(args.max_tool_calls, args.max_seconds, args.model_timeout),
+                    progress=lambda event: print(json.dumps(event), file=sys.stderr, flush=True),
+                )
+            except ModelFailure as exc:
+                print(json.dumps({"status": "TOOL_FAILURE", "error": {"code": exc.code, "message": exc.message}}))
+                return 2
+            print(json.dumps(result, indent=2))
+            return 0 if result["final"]["status"] == "ROOT_CAUSE_IDENTIFIED" else 1
         if args.command == "prepare":
             ctx = prepare(args.repository, args.sessions.resolve(), args.docker)
             result = ToolResult("ok", {"session": str(ctx.session_dir), "repository": ctx.repository.source,

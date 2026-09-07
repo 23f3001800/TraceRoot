@@ -11,6 +11,15 @@ from .process import run_process
 from .repository import make_snapshot
 
 def docker(context, args, timeout=30, input_bytes=None, limit=65536):
+    investigation_deadline = getattr(context, "operation_deadline", None)
+    if investigation_deadline is not None:
+        if args[:2] == ["rm", "-f"]:
+            timeout = min(timeout, 5)  # Bounded cleanup grace after cancellation.
+        else:
+            remaining = investigation_deadline - time.monotonic()
+            if remaining <= 0:
+                raise ToolFailure("investigation_timeout", "Investigation deadline reached.", "timeout")
+            timeout = min(timeout, remaining)
     return run_process([context.config["docker"], *args], timeout, input_bytes, limit)
 
 def checked(context, args, timeout=30, input_bytes=None):

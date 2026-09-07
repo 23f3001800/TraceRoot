@@ -1,15 +1,14 @@
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
 
+@dataclass(frozen=True)
+class LLMConfig:
+    model_name: str = "gemini-2.5-flash"
+    max_tokens: int = 4096
+    temperature: float = 0.2
+    thinking_budget: int = 1024
 
-class LLMConfig(BaseModel):
-    """
-    Configuration for a Language Model (LLM).
-    """
-
-    model_name: str = Field(..., description="The name of the language model.")
-    max_tokens: int = Field(..., description="The maximum number of tokens to generate.")
-    temperature: float = Field(..., description="Sampling temperature for generation.")
-    top_p: float = Field(..., description="Top-p sampling parameter.")
-    frequency_penalty: float = Field(..., description="Frequency penalty for generation.")
-    presence_penalty: float = Field(..., description="Presence penalty for generation.")
-
+    def __post_init__(self):
+        if not 256 <= self.max_tokens <= 8192:
+            raise ValueError("max_tokens must be between 256 and 8192")
+        if not 0 <= self.temperature <= 1 or not 0 <= self.thinking_budget <= 2048:
+            raise ValueError("Invalid sampling or thinking budget")

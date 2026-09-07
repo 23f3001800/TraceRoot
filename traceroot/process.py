@@ -49,6 +49,17 @@ def run_process(argv: list[str], timeout: int, input_bytes: bytes | None = None,
         timed_out = True
         os.killpg(proc.pid, signal.SIGKILL)
         proc.wait()
+    except BaseException:
+        # A global investigation deadline must also terminate the Docker CLI process.
+        if proc.poll() is None:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait()
+        for worker in workers:
+            worker.join(timeout=1)
+        raise
     for worker in workers:
         worker.join(timeout=2)
     return ProcessResult(proc.returncode, bytes(buffers[0]), bytes(buffers[1]),

@@ -17,7 +17,6 @@ class ModelReply:
 def load_api_key(env_file: Path | None = None) -> str:
     key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not key and env_file and env_file.is_file():
-        # Read only the explicitly selected credential; no shell execution or expansion.
         for line in env_file.read_text().splitlines():
             name, separator, value = line.partition("=")
             if separator and name.strip() == "GEMINI_API_KEY":
@@ -29,6 +28,17 @@ def load_api_key(env_file: Path | None = None) -> str:
         raise ModelFailure("credential_missing", "Configure GEMINI_API_KEY in the environment or operator .env file.")
     return key
 
+def retry_options(config: LLMConfig):
+    from google.genai import types
+    return types.HttpRetryOptions(
+        attempts=config.max_transient_retries + 1,
+        initial_delay=0.5,
+        max_delay=0.5,
+        exp_base=1,
+        jitter=0,
+        http_status_codes=[429, 500, 502, 503, 504],
+    )
+
 class GeminiProvider:
     def __init__(self, config: LLMConfig, api_key: str):
         self.config = config
@@ -37,9 +47,10 @@ class GeminiProvider:
     def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
         from google import genai
         from google.genai import types
-        # No retries: every network attempt is visible to the runner's turn/time budget.
-        http = types.HttpOptions(timeout=max(1, int(timeout * 1000)),
-                                 retry_options=types.HttpRetryOptions(attempts=1))
+        http = types.HttpOptions(
+            timeout=max(1, int(timeout * 1000)),
+            retry_options=retry_options(self.config),
+        )
         try:
             with genai.Client(api_key=self.api_key, http_options=http) as client:
                 response = client.models.generate_content(
@@ -58,7 +69,6 @@ class GeminiProvider:
                 )
         except Exception as exc:
             code = getattr(exc, "code", None)
-            # SDK error bodies can include credentials, payloads, or private model content.
             raise ModelFailure("provider_error", f"Gemini request failed ({code or type(exc).__name__}).") from None
         candidates = response.candidates or []
         if not candidates or not candidates[0].content:

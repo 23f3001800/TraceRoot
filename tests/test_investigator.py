@@ -207,3 +207,15 @@ def test_missing_key_and_env_loading(tmp_path, monkeypatch):
 def os_environ_missing(name):
     import os
     return name not in os.environ
+
+def test_gemini_retry_is_bounded_and_transient_only():
+    from traceroot.llms.config import LLMConfig
+    from traceroot.llms.provider import retry_options
+    options = retry_options(LLMConfig())
+    assert options.attempts == 2
+    assert options.initial_delay == 0.5
+    assert options.max_delay == 0.5
+    assert options.http_status_codes == [429, 500, 502, 503, 504]
+    assert retry_options(LLMConfig(max_transient_retries=0)).attempts == 1
+    with pytest.raises(ValueError):
+        LLMConfig(max_transient_retries=2)

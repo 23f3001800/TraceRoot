@@ -1,0 +1,11 @@
+{
+  "repository": "/home/vikas/target-app",
+  "bug_report": "Some users receive a 500 Internal Server Error when creating an order.",
+  "reproduction_command": null,
+  "constraints": [
+    "read-only investigation",
+    "benchmark folder forbidden",
+    "no code changes",
+    "no database changes"
+  ]
+}

@@ -1,10 +1,9 @@
-# Run the fourth investigator trial
+# Run and resume a single investigator
 
-This command runs one Gemini 3.6 Flash investigator with only six read-only tools.
-It creates a fresh filtered snapshot, disposable FastAPI/PostgreSQL environment,
-and an auditable trajectory. It does not modify target-app.
+From `/home/vikas/TraceRoot` in WSL, configure `GEMINI_API_KEY` in local `.env`.
+Gemini 3.6 Flash receives public target evidence through six read-only tools.
 
-From /home/vikas/TraceRoot:
+1. Prepare a disposable environment:
 
 ```bash
 .venv/bin/python -m traceroot prepare \
@@ -12,40 +11,50 @@ From /home/vikas/TraceRoot:
   --docker '/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe'
 ```
 
-Copy data.session from the result:
+2. Copy `data.session`, then start:
 
 ```bash
 SESSION='/home/vikas/TraceRoot/.traceroot-runs/PASTE_SESSION_ID'
-
 .venv/bin/python -m traceroot investigate \
   --session "$SESSION" \
   --task-file docs/investigator-task.example.json \
   --env-file .env \
   --max-tool-calls 15 \
-  --max-seconds 300 \
-  --model-timeout 60
+  --max-seconds 900 \
+  --model-timeout 90
 ```
 
-The investigator returns a structured final object and stores:
+The first progress event prints the run ID. Results live under
+`$SESSION/agent-runs/RUN_ID/`. `state.json` holds durable state; `summary.json`
+reports `phase`, `resumable`, cumulative counters and stopping reason.
+Provider failures appear separately from application observations.
 
-```text
-$SESSION/agent-runs/RUN_ID/
-  initial.json
-  trajectory.jsonl
-  final.json
-  summary.json
+3. If the provider exhausts retries, copy the same run ID and resume:
+
+```bash
+RUN_ID='PASTE_RUN_ID'
+.venv/bin/python -m traceroot resume \
+  --session "$SESSION" \
+  --run-id "$RUN_ID" \
+  --env-file .env
 ```
 
-Score the run against the private ground truth only after it ends. Review tool
-selection, result status, evidence pointers, output status, call count, and stop
-reason. Do not give benchmark files or this evaluator-only trial report to the
-investigator.
+Resume reloads completed observations and hypotheses. It does not repeat a
+successful reproduction or reset the original budgets. Keep the disposable
+session running until finished. After a process crash, the same resume command
+works; an unknown in-flight tool outcome is stopped for operator review.
+A completed run returns its saved result without further investigation.
 
-Cleanup removes only the named disposable containers and network:
+4. Review `final.json`, `summary.json`, and `trajectory.jsonl`. Check evidence
+citations and hypothesis transitions before comparing with private ground truth.
+Never supply evaluator documents or benchmark files to the model.
+
+5. After investigation is finished, clean up the disposable environment:
 
 ```bash
 .venv/bin/python -m traceroot cleanup --session "$SESSION"
 ```
 
-Gemini retries once only for 429 or transient 5xx responses, with a 0.5-second
-delay. The run still stops at the same overall model and investigation deadlines.
+The checkpoint and evidence files remain for review. Cleaned-up sessions cannot
+continue collecting live evidence. See [state and recovery](investigation-state.md)
+for contracts, failure semantics and cumulative budget rules.

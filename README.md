@@ -10,7 +10,7 @@ TraceRoot lives here. Its standalone commerce target is a sibling repository at
 history. The original TraceRoot commits remain intact.
 
 See [tool design](docs/tool-design.md) and [input contract](docs/input-contract.md)
-for the initial read-only investigation interface. Six structured investigation tools are implemented. No agents or remediation tools are implemented. Provide a sanitized target checkout to investigations; never
+for the initial read-only investigation interface. Six structured investigation tools are implemented. One Gemini investigator now tracks evidence-linked hypotheses and resumes from durable checkpoints. Remediation is not implemented. Provide a sanitized target checkout to investigations; never
 expose evaluator ground truth or the main repository's historical Git objects.
 
 ## Tool layer
@@ -20,3 +20,9 @@ Start with [your next steps](docs/your-next-steps.md) and [tool contracts](docs/
 The [manual investigation](docs/manual-investigation-bug-001.md) records actual calls and evidence. Keep it hidden during future evaluations.
 
 TraceRoot runs untrusted target tests inside disposable containers. Source access and PostgreSQL inspection are read-only.
+
+## Persistent investigation
+
+Follow [run and resume](docs/run-single-investigator.md) for the operator commands.
+See [state and recovery](docs/investigation-state.md) for checkpoint contracts,
+cumulative budgets, hypothesis tracking and provider-failure handling.

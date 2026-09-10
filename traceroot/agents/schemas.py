@@ -121,7 +121,16 @@ ACTION_SCHEMA = {"anyOf": [
     obj({"name": {"type": "string", "enum": [name]}, "arguments": schema})
     for name, schema in TOOL_INPUTS.items()
 ]}
+HYPOTHESIS = obj({
+    "id": {"type": "string", "pattern": "^H[1-9][0-9]?$"},
+    "claim": {"type": "string", "minLength": 1, "maxLength": 1600},
+    "status": {"type": "string", "enum": ["proposed", "supported", "rejected"]},
+    "confidence": {"type": "string", "enum": ["low", "medium", "high"]},
+    "evidence": array(EVIDENCE, 15),
+    "missing_evidence": array(string(300), 5),
+})
 DECISION_SCHEMA = obj({
+    "reviewed_step": integer(0, 15), "hypotheses": array(HYPOTHESIS, 8),
     "hypothesis_summary": string(300), "evidence_summary": string(300),
     "action": nullable(ACTION_SCHEMA), "final_report": nullable(FINAL_SCHEMA),
 })

@@ -5,8 +5,9 @@ from dataclasses import dataclass
 from .config import LLMConfig
 
 class ModelFailure(Exception):
-    def __init__(self, code: str, message: str):
+    def __init__(self, code: str, message: str, retryable: bool = False):
         self.code, self.message = code, message
+        self.retryable = retryable
         super().__init__(message)
 
 @dataclass
@@ -31,13 +32,22 @@ def load_api_key(env_file: Path | None = None) -> str:
 def retry_options(config: LLMConfig):
     from google.genai import types
     return types.HttpRetryOptions(
-        attempts=config.max_transient_retries + 1,
+        attempts=1,
         initial_delay=0.5,
         max_delay=0.5,
         exp_base=1,
         jitter=0,
         http_status_codes=[429, 500, 502, 503, 504],
     )
+
+def generation_schema(schema):
+    """Avoid provider grammar expansion; authoritative bounds remain locally enforced."""
+    bounds = {'minLength', 'maxLength', 'minItems', 'maxItems', 'minimum', 'maximum', 'pattern', 'maxProperties'}
+    if isinstance(schema, dict):
+        return {key: generation_schema(value) for key, value in schema.items() if key not in bounds}
+    if isinstance(schema, list):
+        return [generation_schema(item) for item in schema]
+    return schema
 
 class GeminiProvider:
     def __init__(self, config: LLMConfig, api_key: str):
@@ -60,7 +70,7 @@ class GeminiProvider:
                     config=types.GenerateContentConfig(
                         system_instruction=system,
                         response_mime_type="application/json",
-                        response_json_schema=schema,
+                        response_json_schema=generation_schema(schema),
                         max_output_tokens=self.config.max_tokens,
                         temperature=self.config.temperature,
                         thinking_config=types.ThinkingConfig(
@@ -69,7 +79,10 @@ class GeminiProvider:
                 )
         except Exception as exc:
             code = getattr(exc, "code", None)
-            raise ModelFailure("provider_error", f"Gemini request failed ({code or type(exc).__name__}).") from None
+            import httpx
+            retryable = code in {429, 500, 502, 503, 504} or isinstance(exc, (httpx.TimeoutException, TimeoutError))
+            failure_code = "model_timeout" if isinstance(exc, (httpx.TimeoutException, TimeoutError)) else "provider_error"
+            raise ModelFailure(failure_code, f"Gemini request failed ({code or type(exc).__name__}).", retryable) from None
         candidates = response.candidates or []
         if not candidates or not candidates[0].content:
             raise ModelFailure("empty_response", "Gemini returned no public decision.")

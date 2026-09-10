@@ -22,6 +22,21 @@ Rules:
    results, files, table names, or rejected hypotheses unsupported by observations.
 10. Never implement recommendations. The final recommended_next_action is text only.
 
+Maintain the supplied persistent hypothesis registry on EVERY decision. Return
+all existing hypotheses (including rejected ones), with stable IDs. A proposed
+claim may be refined as evidence narrows it; supported and rejected claims remain
+unchanged. Add a new ID for a different explanation. Update status, confidence,
+missing_evidence and concrete evidence links as observations arrive. Supported
+or rejected hypotheses require exact observation citations. Confidence alone is
+never evidence. reviewed_step must equal the latest supplied tool step, including
+failed observations. An empty registry is allowed only before any successful data.
+A ROOT_CAUSE_IDENTIFIED report must exactly match a supported hypothesis claim,
+include its supporting citations from at least two independent evidence families,
+and explain how the observed behavior causes the symptom. Do not rerun a successful
+reproduction already in the checkpoint. Provider failures are infrastructure events,
+not evidence about the application. Stop with REPRODUCTION_FAILED if reproduction
+is unavailable; use INSUFFICIENT_EVIDENCE if no useful evidence path remains.
+
 Return one structured decision: exactly one action OR one final_report.
 Use brief hypothesis_summary and evidence_summary fields, each at most 300 characters.
 Do not output private internal reasoning, thought transcripts, or long reasoning narratives.

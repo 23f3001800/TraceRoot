@@ -20,3 +20,10 @@
 - Patches apply cleanly to an independently archived stable baseline.
 - Live single-investigator runs remain pending provider authorization.
 - No multi-agent, patching agent, or target-app mutation was introduced.
+
+## Final verification
+
+- Regenerated every patch from an archived stable-v1 baseline.
+- The generator completed its git apply --check validation for BUG-002 through BUG-006.
+- TraceRoot validation passed: 97 tests passed and 4 were skipped.
+

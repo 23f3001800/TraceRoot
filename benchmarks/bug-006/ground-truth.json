@@ -1,0 +1,22 @@
+{
+  "bug_id": "BUG-006",
+  "category": "MULTI-SUBSYSTEM",
+  "report": "Orders are successfully created, but some successful payments leave the order status as PENDING.",
+  "expected": "A completed payment persists the matching order as paid.",
+  "actual": "The payment response is completed but a fresh order read remains pending.",
+  "root": "The payment is committed before the order status assignment; the later dirty order is discarded when the request session closes.",
+  "subsystem": "payment service, order service, and database transaction lifecycle",
+  "evidence": [
+    "completed payment API response",
+    "order API still reports pending",
+    "payments row persisted",
+    "status assignment after commit without a second commit"
+  ],
+  "remediation": "Set the order status before the transaction commit or commit the status update in the same transaction.",
+  "reproduction": "Create an order, submit a valid payment, then fetch the order and inspect payment and order rows.",
+  "verification_criteria": [
+    "Patch applies to stable-v1",
+    "Reproduction demonstrates the reported actual behavior",
+    "Only the documented root cause explains all expected evidence"
+  ]
+}

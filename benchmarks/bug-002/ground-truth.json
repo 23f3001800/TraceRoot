@@ -1,0 +1,21 @@
+{
+  "bug_id": "BUG-002",
+  "category": "CONFIGURATION",
+  "report": "Payments work locally but fail after deployment with 500 errors.",
+  "expected": "Payments succeed when the deployment uses the configured payment region.",
+  "actual": "A valid-looking deployed region makes payment requests return 500.",
+  "root": "docker-compose supplies eu-west-1 while the local payment gateway accepts only us-east-1.",
+  "subsystem": "payment configuration and runtime environment",
+  "evidence": [
+    "payment request log with configured region",
+    "docker-compose environment",
+    "payment gateway configuration check"
+  ],
+  "remediation": "Align the deployed PAYMENTS_REGION with the gateway's supported region and make the expectation explicit.",
+  "reproduction": "Run the compose deployment defaults, create an order, then post its valid payment.",
+  "verification_criteria": [
+    "Patch applies to stable-v1",
+    "Reproduction demonstrates the reported actual behavior",
+    "Only the documented root cause explains all expected evidence"
+  ]
+}

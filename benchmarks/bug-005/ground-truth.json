@@ -1,0 +1,22 @@
+{
+  "bug_id": "BUG-005",
+  "category": "RUNTIME",
+  "report": "The API works initially, but after several requests, order requests become slow or fail.",
+  "expected": "Repeated independent order requests remain fast and successful.",
+  "actual": "The second request exhausts the small database pool and returns 500 after the timeout.",
+  "root": "The order audit helper opens an engine connection for every order and never closes it.",
+  "subsystem": "database connection lifecycle and order service",
+  "evidence": [
+    "first request succeeds and later request times out",
+    "QueuePool timeout log",
+    "connection state",
+    "unclosed engine.connect call"
+  ],
+  "remediation": "Close the audit connection or use a context manager; keep the pool size independent of request leaks.",
+  "reproduction": "Create separate users and orders repeatedly until the connection-pool timeout occurs.",
+  "verification_criteria": [
+    "Patch applies to stable-v1",
+    "Reproduction demonstrates the reported actual behavior",
+    "Only the documented root cause explains all expected evidence"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "bug_id": "BUG-003",
+  "category": "DATA / DATABASE",
+  "report": "Some users see duplicate orders after retrying a request.",
+  "expected": "A repeated logical order request creates at most one order.",
+  "actual": "Two requests carrying the same idempotency key create two rows.",
+  "root": "Order creation stores the idempotency key but neither reuses an existing order nor enforces uniqueness.",
+  "subsystem": "order request handling and orders schema",
+  "evidence": [
+    "two successful HTTP responses",
+    "two rows with one idempotency key",
+    "model without a unique constraint",
+    "service without idempotency lookup"
+  ],
+  "remediation": "Enforce a unique idempotency key and return the original order for a repeated request.",
+  "reproduction": "Post the same order payload and idempotency_key twice, then list matching orders in PostgreSQL.",
+  "verification_criteria": [
+    "Patch applies to stable-v1",
+    "Reproduction demonstrates the reported actual behavior",
+    "Only the documented root cause explains all expected evidence"
+  ]
+}

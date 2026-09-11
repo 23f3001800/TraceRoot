@@ -1,0 +1,36 @@
+diff --git a/app/models.py b/app/models.py
+index 3a830d8..3ce6560 100644
+--- a/app/models.py
++++ b/app/models.py
+@@ -22,6 +22,7 @@ class Order(Base):
+     id: Mapped[int] = mapped_column(primary_key=True)
+     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+     product_name: Mapped[str] = mapped_column(String(200))
++    idempotency_key: Mapped[str | None] = mapped_column(String(100), nullable=True)
+     quantity: Mapped[int] = mapped_column(Integer)
+     unit_price: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+     total_amount: Mapped[Decimal] = mapped_column(Numeric(16, 2))
+diff --git a/app/schemas.py b/app/schemas.py
+index 3125084..eaf72e9 100644
+--- a/app/schemas.py
++++ b/app/schemas.py
+@@ -20,6 +20,7 @@ class OrderCreate(Input):
+     product_name: Product
+     quantity: Annotated[int, Field(gt=0, le=10000, strict=True)]
+     unit_price: Price
++    idempotency_key: Annotated[str | None, Field(min_length=8, max_length=100)] = None
+ 
+ class PaymentCreate(Input):
+     order_id: Annotated[int, Field(gt=0)]
+diff --git a/tests/test_bug_003.py b/tests/test_bug_003.py
+new file mode 100644
+index 0000000..f3687d8
+--- /dev/null
++++ b/tests/test_bug_003.py
+@@ -0,0 +1,6 @@
++def test_retry_returns_the_original_order(client):
++    user = client.post("/users", json={"name": "Retry", "email": "retry@example.com"}).json()
++    payload = {"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99", "idempotency_key": "retry-key-0001"}
++    first = client.post("/orders", json=payload)
++    second = client.post("/orders", json=payload)
++    assert first.json()["id"] == second.json()["id"]

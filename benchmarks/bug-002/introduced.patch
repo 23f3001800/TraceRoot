@@ -1,0 +1,60 @@
+diff --git a/app/payment_gateway.py b/app/payment_gateway.py
+new file mode 100644
+index 0000000..fd43835
+--- /dev/null
++++ b/app/payment_gateway.py
+@@ -0,0 +1,11 @@
++import os
++from app.core import logger
++
++SUPPORTED_REGION = "us-east-1"
++
++def charge(amount):
++    region = os.environ.get("PAYMENTS_REGION", "us-east-1")
++    if region != SUPPORTED_REGION:
++        logger.error("Payment gateway rejected configured region", extra={"payment_region": region})
++        raise RuntimeError("Payment gateway authorization failed")
++    return {"status": "completed", "amount": str(amount)}
+diff --git a/app/services.py b/app/services.py
+index b4a7e1b..46cd612 100644
+--- a/app/services.py
++++ b/app/services.py
+@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
+ from sqlalchemy.orm import Session
+ from app.models import Order, Payment, User
+ from app.schemas import OrderCreate, PaymentCreate, UserCreate
++from app.payment_gateway import charge
+ 
+ def order_total(quantity: int, unit_price: Decimal) -> Decimal:
+     return (unit_price * quantity).quantize(Decimal("0.01"))
+@@ -45,6 +46,7 @@ def create_payment(db: Session, data: PaymentCreate) -> Payment:
+         raise HTTPException(409, "Order already paid")
+     if data.amount != order.total_amount:
+         raise HTTPException(422, "Payment amount must match order total")
++    charge(data.amount)
+     payment = Payment(**data.model_dump())
+     order.status = "paid"
+     db.add(payment)
+diff --git a/docker-compose.yml b/docker-compose.yml
+index 1b7a07f..d090796 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -16,6 +16,7 @@ services:
+   api:
+     build: .
+     environment:
++      PAYMENTS_REGION: ${PAYMENTS_REGION:-eu-west-1}
+       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-commerce}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-commerce}
+     ports:
+       - "${API_PORT:-8000}:8000"
+diff --git a/tests/test_bug_002.py b/tests/test_bug_002.py
+new file mode 100644
+index 0000000..19e3f52
+--- /dev/null
++++ b/tests/test_bug_002.py
+@@ -0,0 +1,5 @@
++def test_deployed_region_payment_completes(client, monkeypatch):
++    monkeypatch.setenv("PAYMENTS_REGION", "eu-west-1")
++    user = client.post("/users", json={"name": "Deploy", "email": "deploy@example.com"}).json()
++    order = client.post("/orders", json={"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99"}).json()
++    assert client.post("/payments", json={"order_id": order["id"], "amount": "9.99"}).status_code == 201

@@ -1,0 +1,47 @@
+diff --git a/app/db.py b/app/db.py
+index e6a3035..8ecff83 100644
+--- a/app/db.py
++++ b/app/db.py
+@@ -1,11 +1,16 @@
+ import os
+-from sqlalchemy import create_engine
++from sqlalchemy import create_engine, text
+ from sqlalchemy.orm import DeclarativeBase, sessionmaker
+ 
+ class Base(DeclarativeBase):
+     pass
+ 
+-engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True, hide_parameters=True)
++engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True, hide_parameters=True, pool_size=2, max_overflow=0, pool_timeout=0.1)
++
++def write_order_audit():
++    connection = engine.connect()
++    connection.execute(text("SELECT 1"))
++    # Connection is intentionally not returned to the pool.
+ SessionLocal = sessionmaker(engine)
+ 
+ def get_db():
+diff --git a/app/services.py b/app/services.py
+index b4a7e1b..acf636a 100644
+--- a/app/services.py
++++ b/app/services.py
+@@ -31,6 +31,8 @@ def get_order(db: Session, order_id: int) -> Order:
+ def create_order(db: Session, data: OrderCreate) -> Order:
+     if db.get(User, data.user_id) is None:
+         raise HTTPException(404, "User not found")
++    from app.db import write_order_audit
++    write_order_audit()
+     order = Order(**data.model_dump(), total_amount=order_total(data.quantity, data.unit_price))
+     db.add(order)
+     db.commit()
+diff --git a/tests/test_bug_005.py b/tests/test_bug_005.py
+new file mode 100644
+index 0000000..7579948
+--- /dev/null
++++ b/tests/test_bug_005.py
+@@ -0,0 +1,5 @@
++def test_repeated_orders_do_not_exhaust_connections(client):
++    for number in range(3):
++        user = client.post("/users", json={"name": f"Pool {number}", "email": f"pool{number}@example.com"}).json()
++        response = client.post("/orders", json={"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99"})
++        assert response.status_code == 201, response.text

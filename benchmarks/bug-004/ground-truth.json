@@ -1,0 +1,22 @@
+{
+  "bug_id": "BUG-004",
+  "category": "DEPENDENCY",
+  "report": "Payment processing started failing after a dependency update.",
+  "expected": "A valid payment completes and marks the order paid.",
+  "actual": "The payment endpoint returns 500 after httpx 0.28 is installed.",
+  "root": "The payment adapter still calls httpx.Client(proxies=...), an API removed in httpx 0.28.",
+  "subsystem": "payment adapter and dependency manifest",
+  "evidence": [
+    "TypeError stack trace",
+    "httpx 0.28 requirement",
+    "adapter uses the removed proxies keyword",
+    "focused payment regression"
+  ],
+  "remediation": "Migrate the adapter to the supported httpx proxy configuration or pin a compatible version temporarily.",
+  "reproduction": "Create an order and submit a valid payment in the patched environment.",
+  "verification_criteria": [
+    "Patch applies to stable-v1",
+    "Reproduction demonstrates the reported actual behavior",
+    "Only the documented root cause explains all expected evidence"
+  ]
+}

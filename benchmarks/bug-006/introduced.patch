@@ -1,0 +1,26 @@
+diff --git a/app/services.py b/app/services.py
+index b4a7e1b..78d2df8 100644
+--- a/app/services.py
++++ b/app/services.py
+@@ -46,8 +46,8 @@ def create_payment(db: Session, data: PaymentCreate) -> Payment:
+     if data.amount != order.total_amount:
+         raise HTTPException(422, "Payment amount must match order total")
+     payment = Payment(**data.model_dump())
+-    order.status = "paid"
+     db.add(payment)
+     db.commit()
+     db.refresh(payment)
++    order.status = "paid"
+     return payment
+diff --git a/tests/test_bug_006.py b/tests/test_bug_006.py
+new file mode 100644
+index 0000000..0ba60d4
+--- /dev/null
++++ b/tests/test_bug_006.py
+@@ -0,0 +1,6 @@
++def test_completed_payment_persists_paid_order(client):
++    user = client.post("/users", json={"name": "Payment", "email": "payment@example.com"}).json()
++    order = client.post("/orders", json={"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99"}).json()
++    payment = client.post("/payments", json={"order_id": order["id"], "amount": "9.99"})
++    assert payment.status_code == 201
++    assert client.get(f"/orders/{order['id']}").json()["status"] == "paid"

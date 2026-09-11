@@ -1,0 +1,52 @@
+diff --git a/app/payment_gateway.py b/app/payment_gateway.py
+new file mode 100644
+index 0000000..9fb3398
+--- /dev/null
++++ b/app/payment_gateway.py
+@@ -0,0 +1,6 @@
++import httpx
++
++def charge(amount):
++    # This was valid before the httpx 0.28 dependency update.
++    with httpx.Client(proxies={"https://": "http://proxy.internal:8080"}) as client:
++        return {"status": "completed", "amount": str(amount)}
+diff --git a/app/services.py b/app/services.py
+index b4a7e1b..46cd612 100644
+--- a/app/services.py
++++ b/app/services.py
+@@ -5,6 +5,7 @@ from sqlalchemy.exc import IntegrityError
+ from sqlalchemy.orm import Session
+ from app.models import Order, Payment, User
+ from app.schemas import OrderCreate, PaymentCreate, UserCreate
++from app.payment_gateway import charge
+ 
+ def order_total(quantity: int, unit_price: Decimal) -> Decimal:
+     return (unit_price * quantity).quantize(Decimal("0.01"))
+@@ -45,6 +46,7 @@ def create_payment(db: Session, data: PaymentCreate) -> Payment:
+         raise HTTPException(409, "Order already paid")
+     if data.amount != order.total_amount:
+         raise HTTPException(422, "Payment amount must match order total")
++    charge(data.amount)
+     payment = Payment(**data.model_dump())
+     order.status = "paid"
+     db.add(payment)
+diff --git a/requirements.txt b/requirements.txt
+index b8c40bc..6711252 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -4,4 +4,4 @@ SQLAlchemy==2.0.40
+ psycopg[binary]==3.2.6
+ pydantic[email]==2.11.4
+ pytest==8.3.5
+-httpx==0.28.1
++httpx==0.28.1  # upgraded from 0.27.2; adapter compatibility pending
+diff --git a/tests/test_bug_004.py b/tests/test_bug_004.py
+new file mode 100644
+index 0000000..f5e2530
+--- /dev/null
++++ b/tests/test_bug_004.py
+@@ -0,0 +1,4 @@
++def test_payment_after_httpx_upgrade_completes(client):
++    user = client.post("/users", json={"name": "Upgrade", "email": "upgrade@example.com"}).json()
++    order = client.post("/orders", json={"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99"}).json()
++    assert client.post("/payments", json={"order_id": order["id"], "amount": "9.99"}).status_code == 201

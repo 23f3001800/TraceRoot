@@ -69,3 +69,18 @@
 - Applied only its isolated private patch in a disposable directory and Docker session.
 - The environment rejected sending that patched snapshot to Gemini; it distinguishes the public baseline from private benchmark changes.
 
+
+## State-assertion reproduction correction
+
+- Focused tests that fail an assertion without an HTTP status comparison now report reproduced true.
+- This preserves null expected and observed fields while allowing data-state and multi-subsystem benchmarks to proceed.
+
+
+## Approved Gemini live-investigation flow
+
+- Every run clones published target-commerce-api, checks out stable-v1, applies exactly one private patch, and uses a disposable read-only Docker session.
+- BUG-001: reproduction observed 201 to 500; logs found order_total_consistent CheckViolation; search and read_file linked it to bulk discount logic; evaluator returned ROOT_CAUSE_IDENTIFIED.
+- BUG-001 used four tool calls and six model calls. Provider recovery resumed without rerunning reproduction.
+- BUG-002 Docker setup failed transiently before Gemini. BUG-003 exposed state-assertion reproduction handling, now corrected. BUG-004 through BUG-006 remain pending.
+- Full suite after correction: 97 passed, 4 skipped.
+

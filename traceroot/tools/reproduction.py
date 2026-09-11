@@ -21,6 +21,9 @@ def run_reproduction(context, repository_path: str,
                 if len(unique) == 1:
                     expected, observed = unique.pop()
                     result.data.update(reproduced=expected != observed, expected=expected, observed=observed)
+            elif result.data["failed"] > 0 and result.data["errors"] == 0:
+                result.data["reproduced"] = True
             elif result.data["exit_code"] == 0:
                 result.data["reproduced"] = False
     return result
+

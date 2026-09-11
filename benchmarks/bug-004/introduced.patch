@@ -31,7 +31,7 @@ index b4a7e1b..46cd612 100644
      order.status = "paid"
      db.add(payment)
 diff --git a/requirements.txt b/requirements.txt
-index b8c40bc..6711252 100644
+index b8c40bc..5ad02e9 100644
 --- a/requirements.txt
 +++ b/requirements.txt
 @@ -4,4 +4,4 @@ SQLAlchemy==2.0.40
@@ -39,13 +39,16 @@ index b8c40bc..6711252 100644
  pydantic[email]==2.11.4
  pytest==8.3.5
 -httpx==0.28.1
-+httpx==0.28.1  # upgraded from 0.27.2; adapter compatibility pending
++httpx==0.28.0
 diff --git a/tests/test_bug_004.py b/tests/test_bug_004.py
 new file mode 100644
-index 0000000..f5e2530
+index 0000000..4ebd38e
 --- /dev/null
 +++ b/tests/test_bug_004.py
-@@ -0,0 +1,4 @@
+@@ -0,0 +1,7 @@
++import pytest
++
++@pytest.mark.reproduction
 +def test_payment_after_httpx_upgrade_completes(client):
 +    user = client.post("/users", json={"name": "Upgrade", "email": "upgrade@example.com"}).json()
 +    order = client.post("/orders", json={"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99"}).json()

@@ -104,10 +104,10 @@ def apply_bug(name: str, tree: Path) -> None:
         add_file(tree, "app/payment_gateway.py", '''import httpx\n\ndef charge(amount):\n    # This was valid before the httpx 0.28 dependency update.\n    with httpx.Client(proxies={"https://": "http://proxy.internal:8080"}) as client:\n        return {"status": "completed", "amount": str(amount)}\n''')
         replace(services, "from app.schemas import OrderCreate, PaymentCreate, UserCreate", "from app.schemas import OrderCreate, PaymentCreate, UserCreate\nfrom app.payment_gateway import charge")
         replace(services, "    payment = Payment(**data.model_dump())", "    charge(data.amount)\n    payment = Payment(**data.model_dump())")
-        replace(requirements, "httpx==0.28.1", "httpx==0.28.1  # upgraded from 0.27.2; adapter compatibility pending")
+        replace(requirements, "httpx==0.28.1", "httpx==0.28.0")
     elif name == "bug-005":
         replace(db, "from sqlalchemy import create_engine", "from sqlalchemy import create_engine, text")
-        replace(db, "engine = create_engine(os.environ[\"DATABASE_URL\"], pool_pre_ping=True, hide_parameters=True)", "engine = create_engine(os.environ[\"DATABASE_URL\"], pool_pre_ping=True, hide_parameters=True, pool_size=2, max_overflow=0, pool_timeout=0.1)\n\ndef write_order_audit():\n    connection = engine.connect()\n    connection.execute(text(\"SELECT 1\"))\n    # Connection is intentionally not returned to the pool.")
+        replace(db, "engine = create_engine(os.environ[\"DATABASE_URL\"], pool_pre_ping=True, hide_parameters=True)", "engine = create_engine(os.environ[\"DATABASE_URL\"], pool_pre_ping=True, hide_parameters=True, pool_size=2, max_overflow=0, pool_timeout=0.1)\n_audit_connections = []\n\ndef write_order_audit():\n    connection = engine.connect()\n    connection.execute(text(\"SELECT 1\"))\n    _audit_connections.append(connection)\n    # Connection is intentionally not returned to the pool.")
         replace(services, "    order = Order(**data.model_dump(), total_amount=order_total(data.quantity, data.unit_price))", "    from app.db import write_order_audit\n    write_order_audit()\n    order = Order(**data.model_dump(), total_amount=order_total(data.quantity, data.unit_price))")
     elif name == "bug-006":
         replace(services, "    payment = Payment(**data.model_dump())\n    order.status = \"paid\"\n    db.add(payment)\n    db.commit()\n    db.refresh(payment)", "    payment = Payment(**data.model_dump())\n    db.add(payment)\n    db.commit()\n    db.refresh(payment)\n    order.status = \"paid\"")
@@ -146,7 +146,7 @@ def apply_bug(name: str, tree: Path) -> None:
     assert client.get(f"/orders/{order['id']}").json()["status"] == "paid"
 ''',
     }[name]
-    add_file(tree, f"tests/test_{name.replace('-', '_')}.py", regression)
+    add_file(tree, f"tests/test_{name.replace('-', '_')}.py", "import pytest\n\n@pytest.mark.reproduction\n" + regression)
 
 
 def command(*args: str, cwd: Path) -> subprocess.CompletedProcess[str]:
@@ -192,6 +192,9 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+
 
 
 

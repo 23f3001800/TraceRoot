@@ -1,8 +1,8 @@
 diff --git a/app/db.py b/app/db.py
-index e6a3035..8ecff83 100644
+index e6a3035..41eb90b 100644
 --- a/app/db.py
 +++ b/app/db.py
-@@ -1,11 +1,16 @@
+@@ -1,11 +1,18 @@
  import os
 -from sqlalchemy import create_engine
 +from sqlalchemy import create_engine, text
@@ -13,10 +13,12 @@ index e6a3035..8ecff83 100644
  
 -engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True, hide_parameters=True)
 +engine = create_engine(os.environ["DATABASE_URL"], pool_pre_ping=True, hide_parameters=True, pool_size=2, max_overflow=0, pool_timeout=0.1)
++_audit_connections = []
 +
 +def write_order_audit():
 +    connection = engine.connect()
 +    connection.execute(text("SELECT 1"))
++    _audit_connections.append(connection)
 +    # Connection is intentionally not returned to the pool.
  SessionLocal = sessionmaker(engine)
  
@@ -36,10 +38,13 @@ index b4a7e1b..acf636a 100644
      db.commit()
 diff --git a/tests/test_bug_005.py b/tests/test_bug_005.py
 new file mode 100644
-index 0000000..7579948
+index 0000000..a6c6577
 --- /dev/null
 +++ b/tests/test_bug_005.py
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,8 @@
++import pytest
++
++@pytest.mark.reproduction
 +def test_repeated_orders_do_not_exhaust_connections(client):
 +    for number in range(3):
 +        user = client.post("/users", json={"name": f"Pool {number}", "email": f"pool{number}@example.com"}).json()

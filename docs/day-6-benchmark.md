@@ -52,12 +52,12 @@ git -C /tmp/traceroot-bug-004 apply --reverse /home/vikas/TraceRoot/benchmarks/b
 
 | Bug | Category | Reproduced | Root cause correct | Tools | Calls | Premature conclusion |
 |---|---|---:|---:|---|---:|---:|
-| 001 | DATABASE | Pending live-provider authorization | — | — | — | — |
-| 002 | CONFIGURATION | Not run | — | — | — | — |
-| 003 | DATA / DATABASE | Not run | — | — | — | — |
-| 004 | DEPENDENCY | Not run | — | — | — | — |
-| 005 | RUNTIME | Not run | — | — | — | — |
-| 006 | MULTI-SUBSYSTEM | Not run | — | — | — | — |
+| 001 | DATABASE | Yes: 201 ? 500 | Pending Gemini approval | run_reproduction | 1 | — |
+| 002 | CONFIGURATION | Yes: 201 ? 500 | Pending Gemini approval | run_reproduction | 1 | — |
+| 003 | DATA / DATABASE | Yes: duplicate-ID assertion fails | Pending Gemini approval | run_reproduction | 1 | — |
+| 004 | DEPENDENCY | Yes: 201 ? 500 | Pending Gemini approval | run_reproduction | 1 | — |
+| 005 | RUNTIME | Yes: repeated request 201 ? 500 | Pending Gemini approval | run_reproduction | 1 | — |
+| 006 | MULTI-SUBSYSTEM | Yes: persisted status remains pending | Pending Gemini approval | run_reproduction | 1 | — |
 
 A live Gemini investigation was not run because the environment requires
 separate approval before target-app information can be sent to that provider.
@@ -66,4 +66,5 @@ No multi-agent system is added by Day 6.
 ## Current live-run blocker
 
 The disposable Docker runner is unavailable in this WSL distribution. Restore Docker Desktop WSL integration, then run each patch in a disposable stable-v1 copy before invoking the single investigator. The results table remains intentionally unfilled until those live runs occur.
+
 

@@ -1,0 +1,11 @@
+{
+  "bug_id": "BUG-001",
+  "category": "DATABASE",
+  "report": "Some users receive a 500 Internal Server Error when creating an order.",
+  "expected": "Bulk orders are accepted when their total is valid.",
+  "actual": "Bulk orders return 500 after discounted totals violate the stored total constraint.",
+  "root": "The service discounts bulk orders while the orders constraint requires total_amount to equal quantity times unit_price.",
+  "subsystem": "order pricing service and PostgreSQL constraint",
+  "reproduction": "Run the focused bulk-order regression after applying the patch.",
+  "verification_criteria": ["Patch applies to stable-v1", "Bulk order returns 500", "Runtime, source, and DB evidence identify the mismatch"]
+}

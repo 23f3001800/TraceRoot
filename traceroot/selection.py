@@ -104,9 +104,12 @@ def reproduction_args(repo, command: list[str] | None) -> tuple[list[str], str]:
             else:
                 raise ToolFailure("command_denied", "Unsupported reproduction argument.")
         return select(repo, selector, marker), "Supplied public pytest command."
-    candidates = [test for test in discover(repo)
-                  if {"reproduction", "regression"} & set(test["markers"])]
+    tests = discover(repo)
+    candidates = [test for test in tests if "reproduction" in set(test["markers"])]
+    if not candidates:
+        candidates = [test for test in tests if "regression" in set(test["markers"])]
     if len(candidates) != 1:
         code = "reproduction_unavailable" if not candidates else "reproduction_ambiguous"
         raise ToolFailure(code, "No unique public reproduction/regression test; provide an approved command.", "unavailable")
     return [candidates[0]["node_id"]], "Selected the unique public reproduction/regression-marked test."
+

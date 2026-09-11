@@ -34,3 +34,25 @@
 - Docker Desktop currently reports that Docker is unavailable in this WSL distro.
 - No benchmark variant was applied to the target checkout and no investigator payload was sent externally.
 
+
+## Public target and BUG-001 completion
+
+- Created a separate sanitized public target repository from stable-v1 history.
+- Removed all target benchmark artifacts before publication.
+- Added BUG-001's private patch and ground truth beside BUG-002 through BUG-006.
+
+
+## Reproduction selection correction
+
+- Focused reproduction tests now take priority over generic regression tests.
+- This keeps BUG-001's regression test available while later variants have one deterministic reproduction target.
+
+
+## Deterministic live reproduction
+
+- Created one disposable public-target copy and Docker session per benchmark patch.
+- All six focused reproductions failed as intended without target writes.
+- BUG-001, 002, 004 and 005 reported expected 201 versus observed 500.
+- BUG-003 and 006 reported their intended persisted-state assertion failures.
+- Gemini investigator calls remain blocked by external-data approval review.
+

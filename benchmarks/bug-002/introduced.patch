@@ -49,10 +49,13 @@ index 1b7a07f..d090796 100644
        - "${API_PORT:-8000}:8000"
 diff --git a/tests/test_bug_002.py b/tests/test_bug_002.py
 new file mode 100644
-index 0000000..19e3f52
+index 0000000..0e9d783
 --- /dev/null
 +++ b/tests/test_bug_002.py
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,8 @@
++import pytest
++
++@pytest.mark.reproduction
 +def test_deployed_region_payment_completes(client, monkeypatch):
 +    monkeypatch.setenv("PAYMENTS_REGION", "eu-west-1")
 +    user = client.post("/users", json={"name": "Deploy", "email": "deploy@example.com"}).json()

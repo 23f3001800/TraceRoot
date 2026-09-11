@@ -24,10 +24,13 @@ index 3125084..eaf72e9 100644
      order_id: Annotated[int, Field(gt=0)]
 diff --git a/tests/test_bug_003.py b/tests/test_bug_003.py
 new file mode 100644
-index 0000000..f3687d8
+index 0000000..a9bf818
 --- /dev/null
 +++ b/tests/test_bug_003.py
-@@ -0,0 +1,6 @@
+@@ -0,0 +1,9 @@
++import pytest
++
++@pytest.mark.reproduction
 +def test_retry_returns_the_original_order(client):
 +    user = client.post("/users", json={"name": "Retry", "email": "retry@example.com"}).json()
 +    payload = {"user_id": user["id"], "product_name": "Cable", "quantity": 1, "unit_price": "9.99", "idempotency_key": "retry-key-0001"}

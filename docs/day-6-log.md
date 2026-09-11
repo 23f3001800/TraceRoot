@@ -56,3 +56,9 @@
 - BUG-003 and 006 reported their intended persisted-state assertion failures.
 - Gemini investigator calls remain blocked by external-data approval review.
 
+
+## Repository separation correction
+
+- Removed TraceRoot's accidental origin remote to target-commerce-api.
+- TraceRoot, the private target, and the public target clone now have separate Git repositories and histories.
+

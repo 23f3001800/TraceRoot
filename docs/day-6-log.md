@@ -62,3 +62,10 @@
 - Removed TraceRoot's accidental origin remote to target-commerce-api.
 - TraceRoot, the private target, and the public target clone now have separate Git repositories and histories.
 
+
+## Published-target Gemini attempt
+
+- Prepared BUG-001 from a fresh clone of the published target repository at stable-v1.
+- Applied only its isolated private patch in a disposable directory and Docker session.
+- The environment rejected sending that patched snapshot to Gemini; it distinguishes the public baseline from private benchmark changes.
+

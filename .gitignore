@@ -8,3 +8,5 @@ __pycache__/
 *.tmp
 
 .day6-work/
+
+.day6-live/

@@ -62,3 +62,8 @@ git -C /tmp/traceroot-bug-004 apply --reverse /home/vikas/TraceRoot/benchmarks/b
 A live Gemini investigation was not run because the environment requires
 separate approval before target-app information can be sent to that provider.
 No multi-agent system is added by Day 6.
+
+## Current live-run blocker
+
+The disposable Docker runner is unavailable in this WSL distribution. Restore Docker Desktop WSL integration, then run each patch in a disposable stable-v1 copy before invoking the single investigator. The results table remains intentionally unfilled until those live runs occur.
+

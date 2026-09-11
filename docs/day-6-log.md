@@ -27,3 +27,10 @@
 - The generator completed its git apply --check validation for BUG-002 through BUG-006.
 - TraceRoot validation passed: 97 tests passed and 4 were skipped.
 
+
+## Live-run environment check
+
+- The disposable-session runner uses the Docker CLI supplied to the WSL process.
+- Docker Desktop currently reports that Docker is unavailable in this WSL distro.
+- No benchmark variant was applied to the target checkout and no investigator payload was sent externally.
+

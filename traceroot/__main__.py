@@ -30,6 +30,7 @@ def main():
     investigator.add_argument("--max-tool-calls", type=int, default=15)
     investigator.add_argument("--max-seconds", type=int, default=300)
     investigator.add_argument("--model-timeout", type=int, default=60)
+    investigator.add_argument("--max-model-calls", type=int, default=30)
     resume = commands.add_parser("resume", help="Resume a checkpoint with its original cumulative budgets")
     resume.add_argument("--session", type=Path, required=True)
     resume.add_argument("--run-id", required=True)
@@ -43,15 +44,16 @@ def main():
             print(json.dumps(CATALOG, indent=2))
             return 0
         if args.command in {"investigate", "resume"}:
-            from .agents.investigator import investigate, Budget
+            from .agents.langgraph import investigate_graph
+            from .agents.investigator import Budget
             from .llms.config import LLMConfig
             from .llms.provider import GeminiProvider, ModelFailure, load_api_key
             try:
                 provider = GeminiProvider(LLMConfig(), load_api_key(args.env_file))
-                result = investigate(
+                result = investigate_graph(
                     Context.load(args.session),
                     json.loads(args.task_file.read_text()) if args.command == "investigate" else None, provider,
-                    Budget(args.max_tool_calls, args.max_seconds, args.model_timeout) if args.command == "investigate" else Budget(),
+                    Budget(args.max_tool_calls, args.max_seconds, args.model_timeout, args.max_model_calls) if args.command == "investigate" else Budget(),
                     progress=lambda event: print(json.dumps(event), file=sys.stderr, flush=True),
                     resume_run_id=args.run_id if args.command == "resume" else None,
                 )

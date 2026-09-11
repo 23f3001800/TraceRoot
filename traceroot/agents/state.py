@@ -10,10 +10,16 @@ import tempfile
 from .schemas import obj, array, string, integer, nullable, HYPOTHESIS, FINAL_SCHEMA, validate
 
 STATE_SCHEMA = obj({
-    "version": {"const": 1}, "run_id": string(32), "session_id": string(100),
+    "version": {"const": 2}, "run_id": string(32), "session_id": string(100),
     "initial": {"type": "object"},
-    "phase": {"enum": ["running", "paused", "finished", "interrupted_tool"]},
+    "phase": {"enum": ["running", "paused", "finished", "interrupted_tool"]}, "graph_next": string(100),
     "steps": array({"type": "object"}, 15), "hypotheses": array(HYPOTHESIS, 8),
+    "incident": {"type": "object"}, "reproduction": nullable({"type": "object"}),
+    "observations": array({"type": "object"}, 15), "evidence": array({"type": "object"}, 120),
+    "tool_history": array({"type": "object"}, 15), "provider_errors": array({"type": "object"}, 60),
+    "current_subsystem": nullable(string(200)), "status": string(100), "step_count": integer(0, 15),
+    "model_calls": integer(0, 60), "provider_retry_count": integer(0, 3), "evaluation": nullable({"type": "object"}),
+    "planned_action": nullable({"type": "object"}), "recovery_target": nullable(string(100)), "limitation": nullable(string(500)),
     "reviewed_step": integer(0, 15), "pending_model": {"type": "boolean"}, "pending_action": nullable({"type": "object"}),
     "transcript": array(obj({"role": {"enum": ["user", "model"]}, "text": string(250000)}), 100),
     "events": array({"type": "object"}, 300),
@@ -53,11 +59,48 @@ def run_directory(context, run_id):
         raise ValueError("Run directory is outside this session.")
     return directory
 
+def sync_investigation_view(state):
+    """Maintain Day 4 state as the graph's shared investigation view."""
+    steps = state["steps"]
+    state["incident"] = {"repository": state["initial"]["task"]["repository"],
+                         "bug_report": state["initial"]["task"]["bug_report"]}
+    state["reproduction"] = next((step["result"] for step in steps if step["tool"] == "run_reproduction"), None)
+    state["observations"] = [{"step": step["step"], "tool": step["tool"], "status": step["result"]["status"],
+                              "result_ref": f"/steps/{index}/result"}
+                             for index, step in enumerate(steps)]
+    state["tool_history"] = [{"step": step["step"], "tool": step["tool"],
+                              "arguments": step["arguments"], "status": step["result"]["status"]}
+                             for step in steps]
+    state["evidence"] = [item for hypothesis in state["hypotheses"] for item in hypothesis["evidence"]]
+    state["provider_errors"] = list(state["provider_failures"])
+    state["step_count"] = len(steps)
+    state["model_calls"] = max(state.get("model_calls", 0), state.get("turns", 0))
+    state["status"] = (state["final"] or {}).get("status", "RUNNING")
+    if steps:
+        state["current_subsystem"] = {"run_reproduction": "execution", "read_logs": "runtime",
+            "search_code": "source", "read_file": "source", "inspect_database": "database",
+            "run_tests": "tests"}.get(steps[-1]["tool"])
+    else:
+        state["current_subsystem"] = None
+    return state
+
+def migrate_state(state):
+    if state.get("version") == 1:
+        state["version"] = 2
+        state["graph_next"] = state.get("graph_next") or "reproduce"
+        state.setdefault("provider_retry_count", 0)
+        state.setdefault("evaluation", None)
+        state.setdefault("planned_action", None)
+        state.setdefault("recovery_target", None)
+        state.setdefault("limitation", None)
+        sync_investigation_view(state)
+    return state
 def load_state(context, run_id):
     path = run_directory(context, run_id) / "state.json"
     if path.is_symlink() or path.stat().st_size > 16 * 1024 * 1024:
         raise ValueError("Invalid checkpoint file.")
-    state = json.loads(path.read_text(encoding="utf-8"))
+    state = migrate_state(json.loads(path.read_text(encoding="utf-8")))
+    sync_investigation_view(state)
     validate(state, STATE_SCHEMA)
     if state["run_id"] != run_id or state["session_id"] != context.config["id"]:
         raise ValueError("Checkpoint belongs to another investigation or session.")
@@ -74,3 +117,4 @@ def session_lock(context):
             yield
         finally:
             fcntl.flock(stream, fcntl.LOCK_UN)
+

@@ -7,7 +7,7 @@ name = "traceroot"
 version = "0.1.0"
 description = "One bounded investigator with read-only tools"
 requires-python = ">=3.12"
-dependencies = ["google-genai==2.22.0", "jsonschema==4.25.1"]
+dependencies = ["google-genai==2.22.0", "jsonschema==4.25.1", "langgraph==1.2.11"]
 
 [tool.setuptools.packages.find]
 include = ["traceroot*"]

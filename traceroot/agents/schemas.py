@@ -134,6 +134,15 @@ DECISION_SCHEMA = obj({
     "hypothesis_summary": string(300), "evidence_summary": string(300),
     "action": nullable(ACTION_SCHEMA), "final_report": nullable(FINAL_SCHEMA),
 })
+INVESTIGATION_DECISION_SCHEMA = obj({
+    "reviewed_step": integer(0, 15), "hypotheses": array(HYPOTHESIS, 8),
+    "hypothesis_summary": string(300), "evidence_summary": string(300),
+    "action": nullable(ACTION_SCHEMA), "ready_for_evaluation": {"type": "boolean"},
+})
+EVALUATION_SCHEMA = obj({
+    "decision": {"type": "string", "enum": ["YES", "NO", "BLOCKED"]},
+    "reason": string(500), "final_report": nullable(FINAL_SCHEMA),
+})
 TASK_SCHEMA = obj({
     "repository": {"type": "string", "minLength": 1, "maxLength": 500},
     "bug_report": {"type": "string", "minLength": 1, "maxLength": 1000},

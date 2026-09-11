@@ -35,6 +35,7 @@ class Budget:
     max_tool_calls: int = 15
     max_seconds: int = 300
     model_timeout: int = 60
+    max_model_calls: int = 30
 
     def __post_init__(self):
         if type(self.max_tool_calls) is not int or not 1 <= self.max_tool_calls <= 15:
@@ -43,6 +44,8 @@ class Budget:
             raise ValueError("Time budget must be between 1 and 900 seconds.")
         if type(self.model_timeout) is not int or not 1 <= self.model_timeout <= 120:
             raise ValueError("Model timeout must be between 1 and 120 seconds.")
+        if type(self.max_model_calls) is not int or not 1 <= self.max_model_calls <= 60:
+            raise ValueError("Model-call budget must be between 1 and 60.")
 
 ALLOWED_CONSTRAINTS = {
     "read-only investigation", "benchmark folder forbidden", "no code changes", "no database changes",
@@ -206,12 +209,15 @@ def _investigate(context, task, provider, budget, progress, resume_run_id):
         initial = {'task': task, 'model': model_config, 'budget': asdict(budget),
                    'prompt_contract_sha256': fingerprint, 'snapshot_id': context.repository.snapshot_id}
         state = {
-            'version': 1, 'run_id': uuid4().hex, 'session_id': context.config['id'], 'initial': initial,
-            'phase': 'running', 'steps': [], 'hypotheses': [], 'reviewed_step': 0,
+            'version': 2, 'run_id': uuid4().hex, 'session_id': context.config['id'], 'initial': initial,
+            'phase': 'running', 'graph_next': 'reproduce', 'steps': [], 'hypotheses': [], 'reviewed_step': 0,
             'pending_action': None, 'pending_model': False, 'transcript': [], 'events': [], 'provider_failures': [], 'tool_failures': [],
             'turns': 0, 'decisions': 0, 'invalid': 0, 'consecutive_invalid': 0, 'resume_count': 0,
             'elapsed_seconds': 0.0, 'usage': {'input_tokens': 0, 'output_tokens': 0, 'thinking_tokens': 0},
-            'final': None, 'stopping_reason': None, 'updated_at': utc_now(),
+            'final': None, 'stopping_reason': None, 'updated_at': utc_now(), 'provider_retry_count': 0, 'evaluation': None,
+            'incident': {'repository': task['repository'], 'bug_report': task['bug_report']}, 'reproduction': None, 'observations': [], 'evidence': [],
+            'tool_history': [], 'provider_errors': [], 'current_subsystem': None, 'status': 'RUNNING', 'step_count': 0, 'model_calls': 0,
+            'planned_action': None, 'recovery_target': None, 'limitation': None,
         }
     directory = run_directory(context, state['run_id'])
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)

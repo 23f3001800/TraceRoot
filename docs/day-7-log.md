@@ -63,3 +63,9 @@
 - BUG-005 resumed from step 2 without replaying reproduction. Its supported hypothesis remains database QueuePool exhaustion, cited to the 500 reproduction and TimeoutError log entry. It paused after OpenRouter provider failures.
 - BUG-006 reproduced and collected runtime logs in parallel, then paused on its first provider failure. No hypothesis was persisted yet.
 - Both checkpoints remain resumable and preserve their disposable environments.
+
+## 2026-09-14 — Final six-run evaluation
+
+- Recorded the best observed result for BUG-001 through BUG-006 in `docs/day-7-final-evaluation.md`.
+- Chose one future specialist: Evidence Auditor. It independently validates citations and root-cause sufficiency but cannot investigate or write.
+- Deferred code, database, and fix agents: present evidence does not justify them.

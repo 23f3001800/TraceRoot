@@ -19,3 +19,10 @@
 - BUG-003 run `cafa8c1a270d40e48efcb3036dbd13eb`: reproduction confirmed, two read-only tools ran, then Gemini produced three invalid structured decisions. Final status: `TOOL_FAILURE`, limitation `invalid_decisions`.
 - This is a reasoning/structured-output gap, not missing application evidence or a provider failure.
 - Improved Docker failure messages to identify the failed operation without exposing secrets.
+
+## 2026-09-14 — Structured decision repair
+
+- Inspected saved rejection messages for BUG-004: Gemini produced IDs such as `h-1`, while persisted state requires canonical `H1`.
+- Added a narrow provider-boundary normalizer for only `H`, optional separator, and 1–99. Arbitrary IDs remain rejected.
+- Corrected the investigator prompt to describe the registered read-only tools and require `H1`, `H2`, and so on.
+- Added a normalization regression test; focused suite passed: `8 passed`.

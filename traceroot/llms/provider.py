@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from pathlib import Path
 from dataclasses import dataclass
 from .config import LLMConfig
@@ -39,6 +40,19 @@ def retry_options(config: LLMConfig):
         jitter=0,
         http_status_codes=[429, 500, 502, 503, 504],
     )
+
+def canonicalize_hypothesis_ids(decision: dict) -> dict:
+    """Normalize harmless model formatting while retaining strict stored IDs."""
+    hypotheses = decision.get("hypotheses") if isinstance(decision, dict) else None
+    if not isinstance(hypotheses, list):
+        return decision
+    for hypothesis in hypotheses:
+        if not isinstance(hypothesis, dict) or not isinstance(hypothesis.get("id"), str):
+            continue
+        match = re.fullmatch(r"[Hh][ _-]?([1-9][0-9]?)", hypothesis["id"].strip())
+        if match:
+            hypothesis["id"] = f"H{match.group(1)}"
+    return decision
 
 def generation_schema(schema):
     """Avoid provider grammar expansion; authoritative bounds remain locally enforced."""
@@ -89,7 +103,7 @@ class GeminiProvider:
         text = "".join(part.text or "" for part in candidates[0].content.parts or []
                        if not getattr(part, "thought", False))
         try:
-            decision = json.loads(text)
+            decision = canonicalize_hypothesis_ids(json.loads(text))
         except (ValueError, TypeError):
             raise ModelFailure("invalid_json", "Gemini returned an incomplete or invalid JSON decision.") from None
         usage = response.usage_metadata

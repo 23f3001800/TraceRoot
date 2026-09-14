@@ -97,3 +97,12 @@
 - Result: ROOT_CAUSE_IDENTIFIED. PAYMENTS_REGION is read at runtime and rejected when it differs from supported us-east-1.
 - Five tool calls, seven model calls, no provider or tool failures; checkpoint resume completed evidence evaluation.
 
+
+## Manual evaluation handoff
+
+- User will run BUG-003 through BUG-006; no further Gemini calls started.
+- Added docs/day-6-manual-runs.md covering published clone, isolated patch,
+  setup, investigation, resume, scoring, artifact paths and cleanup.
+- Recorded observed tool/recovery/evidence gaps and conditional specialist roles.
+- Documented current model and old helper cleanup limitations. Do not delete
+  locks to bypass an active run. Patch helper failed; used a literal file write.

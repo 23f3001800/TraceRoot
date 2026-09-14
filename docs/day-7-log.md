@@ -77,3 +77,9 @@
 - Auditor receives evidence only and cannot choose tools.
 - Added structured SUPPORTED, INSUFFICIENT, and CONTRADICTED routing.
 - Focused graph, recovery, and provider tests passed: `25 passed`.
+
+## 2026-09-14 — Auditor live comparison attempt
+
+- Resumed BUG-006 under the Investigator-plus-Auditor graph.
+- The provider failed before the next investigator decision, so the Auditor was not called.
+- Reproduction and logs remain preserved at step 2; the run is resumable and did not replay tools.

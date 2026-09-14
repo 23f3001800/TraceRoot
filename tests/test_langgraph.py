@@ -39,8 +39,10 @@ def final_report():
             "limitations": []}
 
 def evaluation_yes():
-    return {"decision": "YES", "reason": "Independent runtime and source citations support the supported hypothesis.",
-            "final_report": final_report()}
+    items = final_report()["evidence"]
+    return {"verdict": "SUPPORTED", "claims_checked": [final_report()["root_cause"]],
+            "evidence_supporting": items, "evidence_missing": [], "contradictions": [],
+            "required_next_evidence": [], "final_report": final_report()}
 
 def configure_tools(monkeypatch):
     import traceroot.agents.langgraph as module
@@ -65,7 +67,7 @@ def test_langgraph_has_explicit_nodes_and_conditional_routing(active):
     directory = active.session_dir / "agent-runs" / state["run_id"]
     directory.mkdir(parents=True)
     graph = build_graph(GraphRuntime(active, provider, Budget(), directory, state))
-    assert {"reproduce", "collect_runtime_evidence", "investigate", "evaluate_evidence",
+    assert {"reproduce", "collect_runtime_evidence", "investigate", "evidence_auditor",
             "recovery", "report_limitation", "root_cause_report", "finalize", "check_budget"} <= set(graph.get_graph().nodes)
 
 def test_bug_investigates_through_graph_and_finalizes_supported_root_cause(active, monkeypatch):
@@ -77,7 +79,7 @@ def test_bug_investigates_through_graph_and_finalizes_supported_root_cause(activ
     saved = load_state(active, result["summary"]["run_id"])
     assert saved["incident"]["bug_report"] == "A request fails."
     assert saved["step_count"] == 3 and saved["provider_errors"] == []
-    assert "evaluate_evidence" in [e["node"] for e in saved["events"] if e["event"] == "graph_transition"]
+    assert "evidence_auditor" in [e["node"] for e in saved["events"] if e["event"] == "graph_transition"]
 
 def test_provider_failure_routes_to_recovery_then_resume_without_reproduction(active, monkeypatch):
     configure_tools(monkeypatch)
@@ -103,7 +105,10 @@ def test_blocked_evaluation_routes_to_insufficient_evidence(active, monkeypatch)
     replies = [
         decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py"}}, [hypothesis("proposed")]),
         decision(None, [hypothesis("proposed")], reviewed_step=3, ready=True),
-        {"decision": "BLOCKED", "reason": "No approved source is available.", "final_report": None},
+        {"verdict": "INSUFFICIENT", "claims_checked": [], "evidence_supporting": [], "evidence_missing": ["No approved source is available."], "contradictions": [], "required_next_evidence": ["Collect approved source evidence."], "final_report": None},
+        ModelFailure("provider_error", "Stopped after returning to Investigator.", False),
     ]
-    result = investigate_graph(active, task(active), GraphProvider(replies))
-    assert result["final"]["status"] == "INSUFFICIENT_EVIDENCE" and result["summary"]["graph_next"] == "finalize"
+    provider = GraphProvider(replies)
+    result = investigate_graph(active, task(active), provider)
+    assert result["final"]["status"] == "PROVIDER_FAILURE"
+    assert provider.requests[-1][0] != "You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. Return INSUFFICIENT and state exactly what evidence the Investigator must collect. Return CONTRADICTED when cited evidence conflicts with the claim. Never select tools, edit hypotheses, invent evidence, or agree without verification."

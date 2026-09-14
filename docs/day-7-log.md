@@ -69,3 +69,11 @@
 - Recorded the best observed result for BUG-001 through BUG-006 in `docs/day-7-final-evaluation.md`.
 - Chose one future specialist: Evidence Auditor. It independently validates citations and root-cause sufficiency but cannot investigate or write.
 - Deferred code, database, and fix agents: present evidence does not justify them.
+
+## 2026-09-14 — Evidence Auditor implementation
+
+- Replaced the graph’s combined evaluation node with a constrained Evidence Auditor node.
+- Added persistent audit history and migration defaults for existing Day 4/5 checkpoints.
+- Auditor receives evidence only and cannot choose tools.
+- Added structured SUPPORTED, INSUFFICIENT, and CONTRADICTED routing.
+- Focused graph, recovery, and provider tests passed: `25 passed`.

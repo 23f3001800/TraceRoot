@@ -158,10 +158,14 @@ INVESTIGATION_DECISION_SCHEMA = obj({
     "hypothesis_summary": string(300), "evidence_summary": string(300),
     "action": nullable(ACTION_SCHEMA), "ready_for_evaluation": {"type": "boolean"},
 })
-EVALUATION_SCHEMA = obj({
-    "decision": {"type": "string", "enum": ["YES", "NO", "BLOCKED"]},
-    "reason": string(500), "final_report": nullable(FINAL_SCHEMA),
+AUDIT_SCHEMA = obj({
+    "verdict": {"type": "string", "enum": ["SUPPORTED", "INSUFFICIENT", "CONTRADICTED"]},
+    "claims_checked": array(string(1600), 8), "evidence_supporting": array(EVIDENCE, 15),
+    "evidence_missing": array(string(500), 10), "contradictions": array(string(500), 10),
+    "required_next_evidence": array(string(500), 10), "final_report": nullable(FINAL_SCHEMA),
 })
+# Compatibility name for persisted Day 5 callers; new graph code uses AUDIT_SCHEMA.
+EVALUATION_SCHEMA = AUDIT_SCHEMA
 TASK_SCHEMA = obj({
     "repository": {"type": "string", "minLength": 1, "maxLength": 500},
     "bug_report": {"type": "string", "minLength": 1, "maxLength": 1000},

@@ -219,7 +219,7 @@ def _investigate(context, task, provider, budget, progress, resume_run_id):
             'pending_action': None, 'pending_model': False, 'transcript': [], 'events': [], 'provider_failures': [], 'tool_failures': [],
             'turns': 0, 'decisions': 0, 'invalid': 0, 'consecutive_invalid': 0, 'resume_count': 0,
             'elapsed_seconds': 0.0, 'usage': {'input_tokens': 0, 'output_tokens': 0, 'thinking_tokens': 0},
-            'final': None, 'stopping_reason': None, 'updated_at': utc_now(), 'provider_retry_count': 0, 'evaluation': None,
+            'final': None, 'stopping_reason': None, 'updated_at': utc_now(), 'provider_retry_count': 0, 'evaluation': None, 'audits': [],
             'incident': {'repository': task['repository'], 'bug_report': task['bug_report']}, 'reproduction': None, 'observations': [], 'evidence': [],
             'tool_history': [], 'provider_errors': [], 'current_subsystem': None, 'status': 'RUNNING', 'step_count': 0, 'model_calls': 0,
             'planned_action': None, 'recovery_target': None, 'limitation': None,

@@ -17,7 +17,7 @@ from ..tools import TOOLS
 from .investigator import (Budget, DeadlineExpired, deadline, fallback, observation_view,
                            reproduction_status, validate_final, validate_hypotheses, validate_task)
 from .prompt import SYSTEM_PROMPT
-from .schemas import (CATALOG, EVALUATION_SCHEMA, FINAL_SCHEMA, INVESTIGATION_DECISION_SCHEMA,
+from .schemas import (CATALOG, AUDIT_SCHEMA, FINAL_SCHEMA, INVESTIGATION_DECISION_SCHEMA,
                       TOOL_INPUTS, output_schema, validate)
 from .state import STATE_SCHEMA, atomic_json, load_state, run_directory, session_lock, sync_investigation_view
 
@@ -51,6 +51,7 @@ class InvestigationState(TypedDict, total=False):
     updated_at: str
     provider_retry_count: int
     evaluation: dict[str, Any] | None
+    audits: list[dict[str, Any]]
     incident: dict[str, Any]
     reproduction: dict[str, Any] | None
     observations: list[dict[str, Any]]
@@ -65,13 +66,7 @@ class InvestigationState(TypedDict, total=False):
     recovery_target: str
     planned_action: dict[str, Any]
 
-EVALUATION_PROMPT = """You are the evidence evaluation boundary for one read-only investigation.
-You do not choose a new tool and you do not change hypotheses. Assess only the supplied
-observations, hypothesis registry and evidence links. Return YES only if one supported
-hypothesis is a root cause backed by exact citations from independent evidence families.
-Return NO when more useful investigation remains. Return BLOCKED when access or evidence
-cannot support a conclusion. A final report is required only for YES. Never invent evidence,
-paths, failures, or modifications. Confidence is secondary to cited observations."""
+AUDITOR_PROMPT = """You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. Return INSUFFICIENT and state exactly what evidence the Investigator must collect. Return CONTRADICTED when cited evidence conflicts with the claim. Never select tools, edit hypotheses, invent evidence, or agree without verification."""
 
 
 class GraphRuntime:
@@ -182,6 +177,14 @@ def _request(runtime: GraphRuntime, instruction: str) -> list[dict]:
                 "instruction": instruction})}]
 
 
+def _audit_request(runtime: GraphRuntime) -> list[dict]:
+    state = runtime.state
+    return [{"role": "user", "text": json.dumps({
+        "incident": state["incident"], "reproduction": state["reproduction"],
+        "observations": state["observations"], "hypotheses": state["hypotheses"],
+        "evidence": state["evidence"],
+        "instruction": "Audit the candidate root-cause claims and their cited evidence. You have no tools."})}]
+
 def build_graph(runtime: GraphRuntime):
     graph = StateGraph(InvestigationState)
 
@@ -195,7 +198,7 @@ def build_graph(runtime: GraphRuntime):
         elif len(state["steps"]) >= runtime.budget.max_tool_calls:
             state["limitation"] = "tool_call_budget"
             state["graph_next"] = "report_limitation"
-        elif state["model_calls"] >= runtime.budget.max_model_calls and state["graph_next"] in {"investigate", "evaluate_evidence", "recovery"}:
+        elif state["model_calls"] >= runtime.budget.max_model_calls and state["graph_next"] in {"investigate", "evidence_auditor", "recovery"}:
             state["limitation"] = "model_call_budget"
             state["graph_next"] = "report_limitation"
         return state
@@ -265,7 +268,7 @@ def build_graph(runtime: GraphRuntime):
         state["transcript"].append({"role": "model", "text": json.dumps({
             "hypothesis_summary": decision["hypothesis_summary"], "evidence_summary": decision["evidence_summary"],
             "action": decision["action"], "ready_for_evaluation": decision["ready_for_evaluation"]})})
-        state["graph_next"] = "evaluate_evidence" if decision["ready_for_evaluation"] else "execute_tool"
+        state["graph_next"] = "evidence_auditor" if decision["ready_for_evaluation"] else "execute_tool"
         runtime.checkpoint("hypothesis_update")
         return state
 
@@ -291,40 +294,41 @@ def build_graph(runtime: GraphRuntime):
         runtime.checkpoint("tool_result", step["result"]["status"])
         return state
 
-    def evaluate_evidence(state: InvestigationState):
+    def evidence_auditor(state: InvestigationState):
         runtime.state = state
-        decision = runtime.call_model(EVALUATION_PROMPT, _request(runtime,
-            "Evaluate whether the current evidence is sufficient. Return YES, NO, or BLOCKED. Do not select tools."),
-            EVALUATION_SCHEMA, "evaluate_evidence")
-        if decision is None:
+        audit = runtime.call_model(AUDITOR_PROMPT, _audit_request(runtime), AUDIT_SCHEMA, "evidence_auditor")
+        if audit is None:
             return state
         try:
-            validate(decision, EVALUATION_SCHEMA)
-            verdict = decision["decision"]
-            if verdict == "YES":
-                if decision["final_report"] is None:
-                    raise ValueError("YES requires a final report.")
-                validate_final(decision["final_report"], state["steps"])
-                final = decision["final_report"]
+            validate(audit, AUDIT_SCHEMA)
+            verdict = audit["verdict"]
+            if verdict == "SUPPORTED":
+                if audit["final_report"] is None:
+                    raise ValueError("SUPPORTED requires a final report.")
+                validate_final(audit["final_report"], state["steps"])
+                final = audit["final_report"]
                 matches = [h for h in state["hypotheses"] if h["status"] == "supported" and h["claim"] == final["root_cause"]]
                 if not matches or not any(all(item in h["evidence"] for item in final["evidence"]) for h in matches):
                     raise ValueError("Root cause must match a supported hypothesis and evidence links.")
-            elif decision["final_report"] is not None:
-                raise ValueError("Only YES may include a final report.")
+            elif audit["final_report"] is not None:
+                raise ValueError("Only SUPPORTED may include a final report.")
         except ValueError as exc:
             state["invalid"] += 1
             state["consecutive_invalid"] += 1
-            state["transcript"].append({"role": "user", "text": json.dumps({"evaluation_error": str(exc)[:300]})})
+            state["transcript"].append({"role": "user", "text": json.dumps({"audit_error": str(exc)[:300]})})
             state["limitation"] = "invalid_decisions" if state["consecutive_invalid"] >= 3 else None
-            state["graph_next"] = "report_limitation" if state["limitation"] else "evaluate_evidence"
-            runtime.checkpoint("evaluate_evidence", "rejected")
+            state["graph_next"] = "report_limitation" if state["limitation"] else "evidence_auditor"
+            runtime.checkpoint("evidence_auditor", "rejected")
             return state
         state["consecutive_invalid"] = 0
-        state["evaluation"] = decision
-        state["graph_next"] = {"YES": "root_cause_report", "NO": "investigate", "BLOCKED": "report_limitation"}[decision["decision"]]
-        if decision["decision"] == "BLOCKED":
-            state["limitation"] = decision["reason"]
-        runtime.checkpoint("evaluate_evidence", decision["decision"])
+        state["evaluation"] = audit
+        state["audits"].append(audit)
+        if audit["verdict"] == "SUPPORTED":
+            state["graph_next"] = "root_cause_report"
+        else:
+            state["transcript"].append({"role": "user", "text": json.dumps({"auditor_verdict": audit["verdict"], "required_next_evidence": audit["required_next_evidence"], "contradictions": audit["contradictions"]})})
+            state["graph_next"] = "investigate"
+        runtime.checkpoint("evidence_auditor", audit["verdict"])
         return state
 
     def recovery(state: InvestigationState):
@@ -387,15 +391,15 @@ def build_graph(runtime: GraphRuntime):
     graph.add_node("collect_runtime_evidence", collect_runtime_evidence)
     graph.add_node("investigate", investigate)
     graph.add_node("execute_tool", execute_tool)
-    graph.add_node("evaluate_evidence", evaluate_evidence)
+    graph.add_node("evidence_auditor", evidence_auditor)
     graph.add_node("recovery", recovery)
     graph.add_node("report_limitation", report_limitation)
     graph.add_node("root_cause_report", root_cause_report)
     graph.add_node("finalize", finalize)
     routes = {name: name for name in ["reproduce", "collect_runtime_evidence", "investigate", "execute_tool",
-        "evaluate_evidence", "recovery", "report_limitation", "root_cause_report", "finalize"]}
+        "evidence_auditor", "recovery", "report_limitation", "root_cause_report", "finalize"]}
     graph.add_conditional_edges(START, lambda state: state.get("graph_next") or "reproduce", routes)
-    for name in ["check_budget", "reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "evaluate_evidence", "recovery", "report_limitation", "root_cause_report"]:
+    for name in ["check_budget", "reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "evidence_auditor", "recovery", "report_limitation", "root_cause_report"]:
         graph.add_edge(name, "check_budget") if name != "check_budget" else None
     graph.add_conditional_edges("check_budget", lambda state: state.get("graph_next") or "report_limitation", routes)
     graph.add_edge("finalize", END)
@@ -405,7 +409,7 @@ def build_graph(runtime: GraphRuntime):
 def _initial_state(context, task, provider, budget):
     validate_task(task, context)
     fingerprint = hashlib.sha256(json.dumps({"prompt": SYSTEM_PROMPT, "catalog": CATALOG,
-        "investigate": INVESTIGATION_DECISION_SCHEMA, "evaluate": EVALUATION_SCHEMA}, sort_keys=True).encode()).hexdigest()
+        "investigate": INVESTIGATION_DECISION_SCHEMA, "auditor": AUDIT_SCHEMA}, sort_keys=True).encode()).hexdigest()
     return {"version": 2, "run_id": uuid4().hex, "session_id": context.config["id"],
         "initial": {"task": task, "model": asdict(provider.config), "budget": asdict(budget),
                     "prompt_contract_sha256": fingerprint, "snapshot_id": context.repository.snapshot_id},
@@ -413,7 +417,7 @@ def _initial_state(context, task, provider, budget):
         "pending_action": None, "pending_model": False, "transcript": [], "events": [], "provider_failures": [], "tool_failures": [],
         "turns": 0, "decisions": 0, "invalid": 0, "consecutive_invalid": 0, "resume_count": 0,
         "elapsed_seconds": 0.0, "usage": {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0},
-        "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None,
+        "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None, "audits": [],
         "incident": {}, "reproduction": None, "observations": [], "evidence": [], "tool_history": [], "provider_errors": [],
         "current_subsystem": None, "status": "RUNNING", "step_count": 0, "model_calls": 0,
         "planned_action": None, "recovery_target": None, "limitation": None}

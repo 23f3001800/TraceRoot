@@ -90,3 +90,10 @@
 - On 2026-09-14, Docker Desktop's WSL integration was unavailable through TraceRoot's exact Docker CLI path.
 - BUG-002 through BUG-006 Gemini evaluations remain queued; no partial session was created while Docker was unavailable.
 
+
+## BUG-002 Gemini result
+
+- Reproduced payment 500, collected runtime logs, and inspected payment configuration source.
+- Result: ROOT_CAUSE_IDENTIFIED. PAYMENTS_REGION is read at runtime and rejected when it differs from supported us-east-1.
+- Five tool calls, seven model calls, no provider or tool failures; checkpoint resume completed evidence evaluation.
+

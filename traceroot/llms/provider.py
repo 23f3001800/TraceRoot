@@ -139,7 +139,8 @@ class OpenRouterProvider:
             {"role": message["role"], "content": message["text"]} for message in messages]],
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
-            "response_format": {"type": "json_object"}}
+            "response_format": {"type": "json_schema", "json_schema": {
+                "name": "traceroot_decision", "strict": True, "schema": generation_schema(schema)}}}
         try:
             response = httpx.post(f"{self.base_url}/chat/completions", headers={
                 "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},

@@ -50,3 +50,10 @@
 - Added OpenRouter OpenAI-compatible JSON provider, using `OPENROUTER_MODEL` when supplied and `google/gemini-2.5-flash` otherwise.
 - Provider factory prefers OpenRouter when configured.
 - Added focused provider tests: `8 passed`.
+
+
+## 2026-09-14 ? OpenRouter structured output
+
+- OpenRouter completed model calls but returned actions outside the local union schema.
+- Switched its request from generic JSON mode to OpenAI-compatible strict JSON Schema mode.
+- Extended the provider regression test to assert schema mode.

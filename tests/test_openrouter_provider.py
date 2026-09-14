@@ -6,9 +6,11 @@ def test_openrouter_provider_uses_json_and_canonicalizes_ids(monkeypatch):
     class Response:
         def raise_for_status(self): pass
         def json(self): return {"choices": [{"message": {"content": json.dumps({"hypotheses": [{"id": "h-1"}]})}}], "usage": {"prompt_tokens": 2, "completion_tokens": 3}}
-    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: Response())
+    captured = {}
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: (captured.update(kwargs) or Response()))
     reply = OpenRouterProvider(LLMConfig(), "key").generate("system", [], {}, 5)
     assert reply.decision["hypotheses"][0]["id"] == "H1"
+    assert captured["json"]["response_format"]["type"] == "json_schema"
 
 def test_factory_prefers_openrouter(tmp_path):
     env = tmp_path / ".env"

@@ -57,3 +57,9 @@
 - OpenRouter completed model calls but returned actions outside the local union schema.
 - Switched its request from generic JSON mode to OpenAI-compatible strict JSON Schema mode.
 - Extended the provider regression test to assert schema mode.
+
+## 2026-09-14 — Parallel BUG-005 and BUG-006
+
+- BUG-005 resumed from step 2 without replaying reproduction. Its supported hypothesis remains database QueuePool exhaustion, cited to the 500 reproduction and TimeoutError log entry. It paused after OpenRouter provider failures.
+- BUG-006 reproduced and collected runtime logs in parallel, then paused on its first provider failure. No hypothesis was persisted yet.
+- Both checkpoints remain resumable and preserve their disposable environments.

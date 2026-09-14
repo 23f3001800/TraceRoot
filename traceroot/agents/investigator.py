@@ -100,7 +100,10 @@ def validate_final(report, steps):
     groups = set()
     families = {"run_reproduction": "execution", "run_tests": "execution",
                 "search_code": "source", "read_file": "source",
-                "read_logs": "runtime", "inspect_database": "database"}
+                "read_logs": "runtime", "inspect_database": "database",
+                "inspect_configuration": "configuration", "inspect_git": "git"}
+    runtime_or_reproduction = False
+    confirming_subsystem = False
     for item in report["evidence"]:
         step = by_step.get(item["step"])
         if not step or step["result"]["status"] != "ok":
@@ -112,14 +115,16 @@ def validate_final(report, steps):
         if item["quote"] not in rendered:
             raise ValueError("Evidence excerpt does not match its cited observation.")
         groups.add(families[step["tool"]])
+        runtime_or_reproduction |= step["tool"] in {"run_reproduction", "run_tests", "read_logs"}
+        confirming_subsystem |= step["tool"] in {"search_code", "read_file", "inspect_database", "inspect_configuration", "inspect_git"}
     for hypothesis in report["rejected_hypotheses"]:
         if not hypothesis["evidence_steps"] or any(
             i not in by_step or by_step[i]["result"]["status"] != "ok" for i in hypothesis["evidence_steps"]
         ):
             raise ValueError("Rejected hypotheses need observed evidence.")
     if report["status"] == "ROOT_CAUSE_IDENTIFIED":
-        if not report["root_cause"] or len(groups) < 2 or groups <= {"source"}:
-            raise ValueError("Root cause requires independent evidence families, not suspicious code alone.")
+        if not report["root_cause"] or len(groups) < 2 or not runtime_or_reproduction or not confirming_subsystem:
+            raise ValueError("Root cause needs runtime or reproduction evidence plus confirming subsystem evidence.")
         if report["reproduction_status"] != "CONFIRMED" and not report["limitations"]:
             raise ValueError("Unconfirmed reproduction must be acknowledged as a limitation.")
     elif report["root_cause"] is not None:

@@ -25,6 +25,7 @@ TOOL_INPUTS = {
     "run_reproduction": obj({
         "repository_path": REPOSITORY,
         "reproduction_command": nullable(array(string(300), 12)), "timeout": TIMEOUT,
+        "consistency_attempts": integer(1, 3),
     }, ["repository_path"]),
     "read_logs": obj({
         "source": {"type": "string", "enum": ["application"]},
@@ -49,6 +50,15 @@ TOOL_INPUTS = {
         "repository": REPOSITORY, "test_selector": nullable(string(300)),
         "timeout": TIMEOUT, "marker": nullable(string(100)),
     }, ["repository"]),
+    "inspect_configuration": obj({
+        "repository": REPOSITORY, "file_path": nullable(string(300)),
+        "scope": {"type": "string", "enum": ["application", "build", "test"]},
+    }, ["repository"]),
+    "inspect_git": obj({
+        "repository": REPOSITORY,
+        "operation": {"type": "string", "enum": ["history", "changed_files", "dependency_changes"]},
+        "limit": integer(1, 20),
+    }, ["repository", "operation"]),
 }
 DESCRIPTIONS = {
     "run_reproduction": "Establish a failure using an approved command or uniquely marked public test. Unavailable reproduction is explicit.",
@@ -57,6 +67,8 @@ DESCRIPTIONS = {
     "read_file": "Inspect selected lines of a public file discovered during investigation. Source is read-only; protected paths are rejected.",
     "inspect_database": "Check actual public PostgreSQL tables, columns, constraints, or bounded rows. Only fixed read-only operations are permitted.",
     "run_tests": "Run a discovered test, file, or marker-filtered suite to confirm or reject hypotheses and measure failure scope.",
+    "inspect_configuration": "Inspect bounded, sanitized public application, build, or test configuration. Secret values and protected paths are never returned.",
+    "inspect_git": "Inspect bounded read-only commit history, changed public files, or dependency-version changes. Protected paths are excluded.",
 }
 EXECUTION = obj({
     "command": array(string(500), 40), "exit_code": nullable({"type": "integer"}),
@@ -73,6 +85,8 @@ DATA_SCHEMAS = {
         **deepcopy(EXECUTION["properties"]), "selection_reason": string(),
         "reproduced": {"type": ["boolean", "null"]}, "expected": nullable(integer(100, 599)),
         "observed": nullable(integer(100, 599)),
+        "exact_inputs": {"type": "object"}, "consistency_attempts": integer(1, 3),
+        "consistent": {"type": ["boolean", "null"]}, "attempt_results": array({"type": "object"}, 3),
     }},
     "read_logs": obj({"source": string(), "collected_at": string(),
         "entries": array({"type": "object"}, 100), "truncated": {"type": "boolean"},
@@ -88,6 +102,11 @@ DATA_SCHEMAS = {
     "inspect_database": obj({"database": string(), "schema": string(), "role": string(),
         "transaction_read_only": {"type": "boolean"}, "operation": string(),
         "rows": array({"type": "object"}, 100), "truncated": {"type": "boolean"}}),
+    "inspect_configuration": obj({"scope": string(), "files": array(string(500), 20),
+        "entries": array(obj({"file": string(500), "line": integer(1, 1000000), "key": string(200), "value": string(1000), "redacted": {"type": "boolean"}}), 100),
+        "truncated": {"type": "boolean"}}),
+    "inspect_git": obj({"operation": string(), "entries": array({"type": "object"}, 100),
+        "truncated": {"type": "boolean"}}),
 }
 
 def output_schema(name):
@@ -101,7 +120,7 @@ def output_schema(name):
 CATALOG = [{"name": name, "description": DESCRIPTIONS[name],
             "input_schema": schema, "output_schema": output_schema(name)} for name, schema in TOOL_INPUTS.items()]
 
-STATUSES = ["ROOT_CAUSE_IDENTIFIED", "INSUFFICIENT_EVIDENCE", "REPRODUCTION_FAILED", "TOOL_FAILURE", "MAX_STEPS_REACHED"]
+STATUSES = ["ROOT_CAUSE_IDENTIFIED", "INSUFFICIENT_EVIDENCE", "REPRODUCTION_FAILED", "PROVIDER_FAILURE", "TOOL_FAILURE", "MAX_STEPS_REACHED"]
 EVIDENCE = obj({
     "step": integer(1, 15), "pointer": string(300), "quote": {"type": "string", "minLength": 1, "maxLength": 800},
     "supports": string(400),

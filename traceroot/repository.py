@@ -8,7 +8,7 @@ MAX_FILE_BYTES = 128 * 1024
 MAX_SNAPSHOT_BYTES = 8 * 1024 * 1024
 BLOCKED = {"benchmarks", ".git", ".venv", "venv", "__pycache__", ".pytest_cache",
            ".agents", ".codex", "node_modules"}
-CONFIGS = {"pytest.ini", "pyproject.toml", "setup.cfg", "requirements.txt"}
+CONFIGS = {"pytest.ini", "pyproject.toml", "setup.cfg", "requirements.txt", "Dockerfile", "docker-compose.yml", "docker-compose.yaml"}
 
 def relative_path(value: str, allow_dot: bool = False) -> str:
     if not isinstance(value, str) or not value or "\\" in value or ":" in value:

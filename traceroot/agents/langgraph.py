@@ -111,7 +111,7 @@ class GraphRuntime:
         self.state["recovery_target"] = target
         self.state["limitation"] = exc.code
         self.state["graph_next"] = "recovery"
-        self.checkpoint("provider_recovery", "TOOL_FAILURE")
+        self.checkpoint("provider_recovery", "PROVIDER_FAILURE")
 
     def call_model(self, system: str, messages: list[dict], schema: dict, target: str):
         if self.state["model_calls"] >= self.budget.max_model_calls or monotonic() >= self.deadline_at:
@@ -344,7 +344,7 @@ def build_graph(runtime: GraphRuntime):
             state["limitation"] = latest["code"]
             state["graph_next"] = "report_limitation"
             state["phase"] = "paused"
-            runtime.checkpoint("provider_recovery", "TOOL_FAILURE")
+            runtime.checkpoint("provider_recovery", "PROVIDER_FAILURE")
         return state
 
     def report_limitation(state: InvestigationState):
@@ -354,7 +354,9 @@ def build_graph(runtime: GraphRuntime):
             status = "REPRODUCTION_FAILED"
         elif reason in {"time_budget", "tool_call_budget", "model_call_budget"}:
             status = "MAX_STEPS_REACHED"
-        elif reason in {"tool_failure", "invalid_decisions", "provider_error", "model_timeout", "missing_tool_action", "duplicate_reproduction"}:
+        elif reason in {"provider_error", "model_timeout"}:
+            status = "PROVIDER_FAILURE"
+        elif reason in {"tool_failure", "invalid_decisions", "missing_tool_action", "duplicate_reproduction"}:
             status = "TOOL_FAILURE"
         else:
             status = "INSUFFICIENT_EVIDENCE"
@@ -374,7 +376,7 @@ def build_graph(runtime: GraphRuntime):
         runtime.state = state
         validate(state["final"], FINAL_SCHEMA)
         validate_final(state["final"], state["steps"])
-        state["phase"] = "paused" if state["final"]["status"] == "TOOL_FAILURE" and state.get("limitation") in {"provider_error", "model_timeout"} else "finished"
+        state["phase"] = "paused" if state["final"]["status"] == "PROVIDER_FAILURE" else "finished"
         state["stopping_reason"] = state.get("limitation") or "graph_finished"
         state["graph_next"] = "finalize"
         runtime.checkpoint("finalize", state["final"]["status"])
@@ -432,7 +434,7 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
             state["resume_count"] += 1
             state["phase"] = "running"
             previous_provider_failure = bool(state.get("provider_failures"))
-            if state.get("final", {}).get("status") == "TOOL_FAILURE" and (state.get("limitation") in {"provider_error", "model_timeout"} or previous_provider_failure):
+            if state.get("final", {}).get("status") == "PROVIDER_FAILURE" and (state.get("limitation") in {"provider_error", "model_timeout"} or previous_provider_failure):
                 state["final"] = None
                 state["provider_retry_count"] = 0
                 state["graph_next"] = state.get("recovery_target") or "investigate"

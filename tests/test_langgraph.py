@@ -85,7 +85,7 @@ def test_provider_failure_routes_to_recovery_then_resume_without_reproduction(ac
         ModelFailure("provider_error", "Gemini request failed (503).", True),
         ModelFailure("provider_error", "Gemini request failed (503).", True),
     ], retries=1))
-    assert failed["final"]["status"] == "TOOL_FAILURE" and failed["summary"]["phase"] == "paused"
+    assert failed["final"]["status"] == "PROVIDER_FAILURE" and failed["summary"]["phase"] == "paused"
     resumed = investigate_graph(active, None, GraphProvider(graph_replies(active)), resume_run_id=failed["summary"]["run_id"])
     assert resumed["final"]["status"] == "ROOT_CAUSE_IDENTIFIED"
     assert resumed["summary"]["tools_used"] == ["run_reproduction", "read_logs", "read_file"]

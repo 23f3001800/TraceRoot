@@ -2,15 +2,27 @@ from ..contracts import ToolResult, tool
 from ..selection import reproduction_args
 from ..execution import execute_tests
 
+
+def _summary(result):
+    data = result.data or {}
+    return {key: data.get(key) for key in ("exit_code", "outcome", "passed", "failed", "errors", "http_observations")}
+
 @tool
 def run_reproduction(context, repository_path: str,
                      reproduction_command: list[str] | None = None,
-                     timeout: int = 60) -> ToolResult:
+                     timeout: int = 60, consistency_attempts: int = 1) -> ToolResult:
     context.repository.validate(repository_path)
+    if type(consistency_attempts) is not int or not 1 <= consistency_attempts <= 3:
+        raise ValueError("consistency_attempts must be between 1 and 3")
     args, reason = reproduction_args(context.repository, reproduction_command)
-    result = execute_tests(context, args, timeout)
+    attempts = [execute_tests(context, args, timeout) for _ in range(consistency_attempts)]
+    result = attempts[-1]
     if result.data is not None:
         result.data["selection_reason"] = reason
+        result.data["exact_inputs"] = {"test_command": args, "requested_command": reproduction_command, "timeout_seconds": timeout}
+        result.data["consistency_attempts"] = consistency_attempts
+        result.data["attempt_results"] = [_summary(attempt) for attempt in attempts]
+        result.data["consistent"] = None if consistency_attempts == 1 else len({str(_summary(attempt)) for attempt in attempts}) == 1
         result.data["reproduced"] = None
         result.data["expected"] = None
         result.data["observed"] = None
@@ -26,4 +38,3 @@ def run_reproduction(context, repository_path: str,
             elif result.data["exit_code"] == 0:
                 result.data["reproduced"] = False
     return result
-

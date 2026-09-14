@@ -79,7 +79,7 @@ def sync_investigation_view(state):
     if steps:
         state["current_subsystem"] = {"run_reproduction": "execution", "read_logs": "runtime",
             "search_code": "source", "read_file": "source", "inspect_database": "database",
-            "run_tests": "tests"}.get(steps[-1]["tool"])
+            "run_tests": "tests", "inspect_configuration": "configuration", "inspect_git": "git"}.get(steps[-1]["tool"])
     else:
         state["current_subsystem"] = None
     return state

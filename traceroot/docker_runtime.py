@@ -27,7 +27,7 @@ def checked(context, args, timeout=30, input_bytes=None):
     if result.timed_out:
         raise ToolFailure("docker_timeout", "Docker operation timed out.", "timeout")
     if result.exit_code != 0:
-        raise ToolFailure("docker_unavailable", "Docker operation failed; inspect the operator environment.", "unavailable")
+        raise ToolFailure("docker_unavailable", f"Docker {args[0]} operation failed; inspect the operator environment.", "unavailable")
     return result
 
 def container_options(context, name: str) -> list[str]:

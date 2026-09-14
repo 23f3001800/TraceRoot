@@ -26,3 +26,11 @@
 - Added a narrow provider-boundary normalizer for only `H`, optional separator, and 1–99. Arbitrary IDs remain rejected.
 - Corrected the investigator prompt to describe the registered read-only tools and require `H1`, `H2`, and so on.
 - Added a normalization regression test; focused suite passed: `8 passed`.
+
+
+## 2026-09-14 ? BUG-003 rerun
+
+- After hypothesis-ID normalization, BUG-003 advanced from two to seven successful evidence calls.
+- Gemini then exhausted bounded provider retries. TraceRoot returned `PROVIDER_FAILURE`, retained seven steps and hypothesis `H1`, and did not rerun reproduction.
+- The disposable benchmark runner incorrectly cleaned the environment after a paused provider failure. Updated the runner to preserve that session for resume.
+- Docker setup remains intermittently flaky at `exec`; bounded stderr is now recorded in its operator error.

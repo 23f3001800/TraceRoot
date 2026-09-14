@@ -84,3 +84,9 @@
 - BUG-002 Docker setup failed transiently before Gemini. BUG-003 exposed state-assertion reproduction handling, now corrected. BUG-004 through BUG-006 remain pending.
 - Full suite after correction: 97 passed, 4 skipped.
 
+
+## Continuation environment check
+
+- On 2026-09-14, Docker Desktop's WSL integration was unavailable through TraceRoot's exact Docker CLI path.
+- BUG-002 through BUG-006 Gemini evaluations remain queued; no partial session was created while Docker was unavailable.
+

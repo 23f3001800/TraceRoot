@@ -34,3 +34,11 @@
 - Gemini then exhausted bounded provider retries. TraceRoot returned `PROVIDER_FAILURE`, retained seven steps and hypothesis `H1`, and did not rerun reproduction.
 - The disposable benchmark runner incorrectly cleaned the environment after a paused provider failure. Updated the runner to preserve that session for resume.
 - Docker setup remains intermittently flaky at `exec`; bounded stderr is now recorded in its operator error.
+
+## 2026-09-14 — BUG-004 resume
+
+- BUG-004 reproduced and found the runtime error `Client.__init__() got an unexpected keyword argument 'proxies'`.
+- The model proposed the dependency/API mismatch hypothesis with concrete reproduction and log citations.
+- Resume started at saved step 3; reproduction did not run again.
+- Seven cumulative provider failures then exhausted bounded retries. The checkpoint remains paused and resumable.
+- Deferred BUG-005 and BUG-006 live calls because the same provider outage would produce no new evidence.

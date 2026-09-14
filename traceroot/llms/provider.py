@@ -2,7 +2,7 @@ import json
 import os
 import re
 from pathlib import Path
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from .config import LLMConfig
 
 class ModelFailure(Exception):
@@ -112,3 +112,58 @@ class GeminiProvider:
             "output_tokens": getattr(usage, "candidates_token_count", 0) or 0,
             "thinking_tokens": getattr(usage, "thoughts_token_count", 0) or 0,
         })
+
+def _env_value(name: str, env_file: Path | None = None) -> str:
+    value = os.environ.get(name, "").strip()
+    if not value and env_file and env_file.is_file():
+        for line in env_file.read_text().splitlines():
+            key, separator, candidate = line.partition("=")
+            if separator and key.strip() == name:
+                value = candidate.strip().strip("\"'")
+                break
+    return value
+
+
+class OpenRouterProvider:
+    """OpenAI-compatible JSON provider; errors are normalized to ModelFailure."""
+    def __init__(self, config: LLMConfig, api_key: str, model_name: str | None = None,
+                 base_url: str = "https://openrouter.ai/api/v1"):
+        self.model_name = model_name or config.model_name
+        self.config = replace(config, model_name=self.model_name)
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+
+    def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
+        import httpx
+        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *[
+            {"role": message["role"], "content": message["text"]} for message in messages]],
+            "temperature": self.config.temperature,
+            "max_tokens": self.config.max_tokens,
+            "response_format": {"type": "json_object"}}
+        try:
+            response = httpx.post(f"{self.base_url}/chat/completions", headers={
+                "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+                json=payload, timeout=max(1, timeout))
+            response.raise_for_status()
+            body = response.json()
+            content = body["choices"][0]["message"]["content"]
+            if isinstance(content, list):
+                content = "".join(item.get("text", "") for item in content if isinstance(item, dict))
+            decision = canonicalize_hypothesis_ids(json.loads(content))
+        except (httpx.TimeoutException, TimeoutError):
+            raise ModelFailure("model_timeout", "OpenRouter request timed out.", True) from None
+        except (httpx.HTTPError, KeyError, TypeError, ValueError):
+            code = getattr(locals().get("response", None), "status_code", None)
+            raise ModelFailure("provider_error", f"OpenRouter request failed ({code or 'response'}).", code in {429, 500, 502, 503, 504}) from None
+        usage = body.get("usage") or {}
+        return ModelReply(decision, {"input_tokens": usage.get("prompt_tokens", 0) or 0,
+            "output_tokens": usage.get("completion_tokens", 0) or 0, "thinking_tokens": 0})
+
+
+def load_provider(env_file: Path | None, config: LLMConfig):
+    key = _env_value("OPENROUTER_API_KEY", env_file)
+    if key:
+        return OpenRouterProvider(config, key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
+                                  _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1")
+    return GeminiProvider(config, load_api_key(env_file))
+

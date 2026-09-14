@@ -42,3 +42,11 @@
 - Resume started at saved step 3; reproduction did not run again.
 - Seven cumulative provider failures then exhausted bounded retries. The checkpoint remains paused and resumable.
 - Deferred BUG-005 and BUG-006 live calls because the same provider outage would produce no new evidence.
+
+
+## 2026-09-14 ? OpenRouter provider
+
+- Detected `OPENROUTER_API_KEY` by name only; key material was not read into logs.
+- Added OpenRouter OpenAI-compatible JSON provider, using `OPENROUTER_MODEL` when supplied and `google/gemini-2.5-flash` otherwise.
+- Provider factory prefers OpenRouter when configured.
+- Added focused provider tests: `8 passed`.

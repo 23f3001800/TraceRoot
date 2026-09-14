@@ -47,9 +47,9 @@ def main():
             from .agents.langgraph import investigate_graph
             from .agents.investigator import Budget
             from .llms.config import LLMConfig
-            from .llms.provider import GeminiProvider, ModelFailure, load_api_key
+            from .llms.provider import ModelFailure, load_provider
             try:
-                provider = GeminiProvider(LLMConfig(), load_api_key(args.env_file))
+                provider = load_provider(args.env_file, LLMConfig())
                 result = investigate_graph(
                     Context.load(args.session),
                     json.loads(args.task_file.read_text()) if args.command == "investigate" else None, provider,

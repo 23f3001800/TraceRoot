@@ -108,3 +108,11 @@
 - Gemini-primary/OpenRouter-fallback resumed BUG-006 at step 2 and advanced it to four evidence calls without replaying reproduction or logs.
 - The investigator recorded hypothesis H1: successful payment handling does not persist `paid` status to the order.
 - Provider failure occurred before the Evidence Auditor node; checkpoint remains resumable at step 4.
+
+## 2026-09-15 — OpenRouter allowance and free fallback
+
+- Provider history showed OpenRouter HTTP 402, while Gemini returned 503.
+- Read-only OpenRouter key metadata confirmed the new key is valid, free-tier, and has no paid allowance configured.
+- Verified `google/gemini-2.5-flash` is API-compatible but paid; it requires available OpenRouter credit.
+- Set local fallback model to `openrouter/free`, which advertises structured-output support.
+- A minimal strict JSON-schema request completed successfully through `openrouter/free`.

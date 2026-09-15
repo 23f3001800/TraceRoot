@@ -19,6 +19,16 @@ def test_azure_foundry_uses_model_inference_endpoint_and_json(monkeypatch):
     assert captured["json"]["response_format"] == {"type": "json_object"}
 
 
+def test_azure_foundry_normalizes_model_role(monkeypatch):
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return {"choices": [{"message": {"content": "{}"}}]}
+    captured = {}
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: (captured.update(kwargs) or Response()))
+    AzureFoundryProvider(LLMConfig(), "key", "https://demo.services.ai.azure.com/models", "demo").generate("system", [{"role": "model", "text": "prior"}], {}, 5)
+    assert captured["json"]["messages"][1]["role"] == "assistant"
+
+
 def test_azure_openai_v1_uses_deployment_endpoint(monkeypatch):
     class Response:
         def raise_for_status(self): pass

@@ -160,3 +160,17 @@
 
 - gpt-5-mini also rejects non-default temperature values.
 - Azure OpenAI v1 requests omit temperature and use max_completion_tokens.
+
+
+## 2026-09-15 - Azure transcript compatibility
+
+- The full investigator request reached Azure but rejected the Gemini transcript role model.
+- Azure adapter now normalizes that provider-specific role to assistant.
+- Persisted state remains unchanged and portable across providers.
+
+
+## 2026-09-15 - Azure resume approval boundary
+
+- Azure gpt-5-mini passed a minimal structured-output request.
+- The automatic approval review blocked the BUG-006 resume because its saved evidence would be sent to Azure.
+- The checkpoint remains intact at step 5 and will not rerun reproduction.

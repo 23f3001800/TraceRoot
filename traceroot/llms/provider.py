@@ -135,8 +135,9 @@ class OpenRouterProvider:
 
     def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
         import httpx
-        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *[
-            {"role": message["role"], "content": message["text"]} for message in messages]],
+        azure_messages = [{"role": "assistant" if message["role"] == "model" else message["role"],
+                           "content": message["text"]} for message in messages]
+        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *azure_messages],
             "temperature": self.config.temperature,
             "max_tokens": self.config.max_tokens,
             "response_format": {"type": "json_schema", "json_schema": {
@@ -175,8 +176,9 @@ class AzureFoundryProvider:
 
     def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
         import httpx
-        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *[
-            {"role": message["role"], "content": message["text"]} for message in messages]],
+        azure_messages = [{"role": "assistant" if message["role"] == "model" else message["role"],
+                           "content": message["text"]} for message in messages]
+        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *azure_messages],
             "temperature": self.config.temperature, "max_tokens": self.config.max_tokens,
             "response_format": {"type": "json_object"}}
         url = f"{self.endpoint}/chat/completions"

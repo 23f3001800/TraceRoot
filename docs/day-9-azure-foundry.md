@@ -14,6 +14,8 @@ Set these local-only values in .env:
 
 The provider sends read-only investigator prompts to /chat/completions, uses the api-key header, and requests JSON output. No target-app or database write capability is added.
 
+Azure OpenAI deployments are also supported: point AZURE_FOUNDRY_ENDPOINT at the Azure OpenAI resource endpoint and set AZURE_FOUNDRY_MODEL to its deployment name. TraceRoot then uses its /openai/v1/chat/completions endpoint.
+
 ## Fallback
 
 TRACEROOT_PROVIDER=fallback uses Gemini first, then Azure Foundry when Azure configuration is complete. OpenRouter remains available through TRACEROOT_PROVIDER=openrouter.

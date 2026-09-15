@@ -171,6 +171,7 @@ class AzureFoundryProvider:
         self.config = replace(config, model_name=model_name)
         self.api_key, self.endpoint = api_key, endpoint.rstrip("/")
         self.model_name, self.api_version = model_name, api_version
+        self.openai_v1 = ".openai.azure.com" in self.endpoint or self.endpoint.endswith("/openai/v1")
 
     def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
         import httpx
@@ -178,10 +179,16 @@ class AzureFoundryProvider:
             {"role": message["role"], "content": message["text"]} for message in messages]],
             "temperature": self.config.temperature, "max_tokens": self.config.max_tokens,
             "response_format": {"type": "json_object"}}
+        url = f"{self.endpoint}/chat/completions"
+        params = {"api-version": self.api_version}
+        if self.openai_v1:
+            base = self.endpoint if self.endpoint.endswith("/openai/v1") else f"{self.endpoint}/openai/v1"
+            url, params = f"{base}/chat/completions", None
+            payload["max_completion_tokens"] = payload.pop("max_tokens")
+            payload.pop("temperature")
         try:
-            response = httpx.post(f"{self.endpoint}/chat/completions",
-                headers={"api-key": self.api_key, "Content-Type": "application/json"},
-                params={"api-version": self.api_version}, json=payload, timeout=max(1, timeout))
+            response = httpx.post(url, headers={"api-key": self.api_key, "Content-Type": "application/json"},
+                params=params, json=payload, timeout=max(1, timeout))
             response.raise_for_status()
         except (httpx.TimeoutException, TimeoutError):
             raise ModelFailure("model_timeout", "Azure Foundry request timed out.", True) from None

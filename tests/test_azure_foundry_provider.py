@@ -17,3 +17,18 @@ def test_azure_foundry_uses_model_inference_endpoint_and_json(monkeypatch):
     assert captured["headers"]["api-key"] == "key"
     assert captured["params"]["api-version"] == "2024-05-01-preview"
     assert captured["json"]["response_format"] == {"type": "json_object"}
+
+
+def test_azure_openai_v1_uses_deployment_endpoint(monkeypatch):
+    class Response:
+        def raise_for_status(self): pass
+        def json(self): return {"choices": [{"message": {"content": "{}"}}]}
+    captured = {}
+    monkeypatch.setattr("httpx.post", lambda *args, **kwargs: (captured.update({"args": args, **kwargs}) or Response()))
+    AzureFoundryProvider(LLMConfig(), "key", "https://demo.openai.azure.com", "deployment").generate("system", [], {}, 5)
+    assert captured["args"][0] == "https://demo.openai.azure.com/openai/v1/chat/completions"
+    assert captured["params"] is None
+    assert captured["json"]["model"] == "deployment"
+    assert captured["json"]["max_completion_tokens"] == LLMConfig().max_tokens
+    assert "max_tokens" not in captured["json"]
+    assert "temperature" not in captured["json"]

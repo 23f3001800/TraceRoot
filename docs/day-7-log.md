@@ -140,3 +140,23 @@
 - fallback now selects Azure after retryable Gemini failures when Azure is configured.
 - Added unit coverage for provider selection and request contract.
 - Current environment has no Azure Foundry endpoint, key, or deployed model variables, so the saved BUG-006 checkpoint cannot yet run with Azure.
+
+
+## 2026-09-15 - Azure OpenAI deployment discovery
+
+- Foundry AI Services has no deployed model.
+- The existing Azure OpenAI resource has gpt-5-mini deployed.
+- Extended the provider to use the Azure OpenAI v1 chat endpoint for that deployment.
+
+
+## 2026-09-15 - Azure GPT-5 request compatibility
+
+- Live Azure connection reached the deployed gpt-5-mini model.
+- Azure returned unsupported_parameter for max_tokens.
+- Azure OpenAI v1 requests now use max_completion_tokens; model-inference requests keep max_tokens.
+
+
+## 2026-09-15 - Azure GPT-5 parameter compatibility
+
+- gpt-5-mini also rejects non-default temperature values.
+- Azure OpenAI v1 requests omit temperature and use max_completion_tokens.

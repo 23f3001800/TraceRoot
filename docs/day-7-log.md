@@ -116,3 +116,13 @@
 - Verified `google/gemini-2.5-flash` is API-compatible but paid; it requires available OpenRouter credit.
 - Set local fallback model to `openrouter/free`, which advertises structured-output support.
 - A minimal strict JSON-schema request completed successfully through `openrouter/free`.
+
+
+## 2026-09-15 ? OpenRouter provider diagnosis
+
+- Read-only key metadata returned HTTP 200: valid key, free tier, zero usage and no paid allowance.
+- OpenRouter returned HTTP 402 for paid `google/gemini-2.5-flash`; this is billing, not model compatibility.
+- `google/gemini-2.5-flash` supports strict JSON Schema on OpenRouter.
+- `openrouter/free` returned a malformed structured response despite HTTP 200, so it is unsuitable for the strict agent contract.
+- Configured an explicitly structured-output-compatible free fallback model (`nex-agi/nex-n2.5-mini:free`) for local testing.
+- OpenRouter HTTP-200 malformed structured responses now classify as retryable `invalid_json`, not provider HTTP failures.

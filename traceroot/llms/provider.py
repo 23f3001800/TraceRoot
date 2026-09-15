@@ -146,16 +146,19 @@ class OpenRouterProvider:
                 "Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
                 json=payload, timeout=max(1, timeout))
             response.raise_for_status()
+        except (httpx.TimeoutException, TimeoutError):
+            raise ModelFailure("model_timeout", "OpenRouter request timed out.", True) from None
+        except httpx.HTTPError:
+            code = getattr(locals().get("response", None), "status_code", None)
+            raise ModelFailure("provider_error", f"OpenRouter request failed ({code or 'response'}).", code in {429, 500, 502, 503, 504}) from None
+        try:
             body = response.json()
             content = body["choices"][0]["message"]["content"]
             if isinstance(content, list):
                 content = "".join(item.get("text", "") for item in content if isinstance(item, dict))
             decision = canonicalize_hypothesis_ids(json.loads(content))
-        except (httpx.TimeoutException, TimeoutError):
-            raise ModelFailure("model_timeout", "OpenRouter request timed out.", True) from None
-        except (httpx.HTTPError, KeyError, TypeError, ValueError):
-            code = getattr(locals().get("response", None), "status_code", None)
-            raise ModelFailure("provider_error", f"OpenRouter request failed ({code or 'response'}).", code in {429, 500, 502, 503, 504}) from None
+        except (KeyError, TypeError, ValueError):
+            raise ModelFailure("invalid_json", "OpenRouter returned invalid structured JSON.", True) from None
         usage = body.get("usage") or {}
         return ModelReply(decision, {"input_tokens": usage.get("prompt_tokens", 0) or 0,
             "output_tokens": usage.get("completion_tokens", 0) or 0, "thinking_tokens": 0})

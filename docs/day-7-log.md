@@ -102,3 +102,9 @@
 - Explicit `gemini` and `openrouter` modes remain available.
 - Successful fallback is retained in provider-failure history for auditability.
 - Focused provider and graph verification passed: `9 passed`.
+
+## 2026-09-15 — BUG-006 Gemini fallback run
+
+- Gemini-primary/OpenRouter-fallback resumed BUG-006 at step 2 and advanced it to four evidence calls without replaying reproduction or logs.
+- The investigator recorded hypothesis H1: successful payment handling does not persist `paid` status to the order.
+- Provider failure occurred before the Evidence Auditor node; checkpoint remains resumable at step 4.

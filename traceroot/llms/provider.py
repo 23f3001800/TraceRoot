@@ -164,6 +164,43 @@ class OpenRouterProvider:
             "output_tokens": usage.get("completion_tokens", 0) or 0, "thinking_tokens": 0})
 
 
+class AzureFoundryProvider:
+    """Azure AI Foundry model-inference API using an API key."""
+    def __init__(self, config: LLMConfig, api_key: str, endpoint: str, model_name: str,
+                 api_version: str = "2024-05-01-preview"):
+        self.config = replace(config, model_name=model_name)
+        self.api_key, self.endpoint = api_key, endpoint.rstrip("/")
+        self.model_name, self.api_version = model_name, api_version
+
+    def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
+        import httpx
+        payload = {"model": self.model_name, "messages": [{"role": "system", "content": system}, *[
+            {"role": message["role"], "content": message["text"]} for message in messages]],
+            "temperature": self.config.temperature, "max_tokens": self.config.max_tokens,
+            "response_format": {"type": "json_object"}}
+        try:
+            response = httpx.post(f"{self.endpoint}/chat/completions",
+                headers={"api-key": self.api_key, "Content-Type": "application/json"},
+                params={"api-version": self.api_version}, json=payload, timeout=max(1, timeout))
+            response.raise_for_status()
+        except (httpx.TimeoutException, TimeoutError):
+            raise ModelFailure("model_timeout", "Azure Foundry request timed out.", True) from None
+        except httpx.HTTPError:
+            code = getattr(locals().get("response", None), "status_code", None)
+            raise ModelFailure("provider_error", f"Azure Foundry request failed ({code or 'response'}).",
+                               code in {408, 429, 500, 502, 503, 504}) from None
+        try:
+            body = response.json(); content = body["choices"][0]["message"]["content"]
+            if isinstance(content, list):
+                content = "".join(item.get("text", "") for item in content if isinstance(item, dict))
+            decision = canonicalize_hypothesis_ids(json.loads(content))
+        except (KeyError, TypeError, ValueError):
+            raise ModelFailure("invalid_json", "Azure Foundry returned invalid JSON.", True) from None
+        usage = body.get("usage") or {}
+        return ModelReply(decision, {"input_tokens": usage.get("prompt_tokens", 0) or 0,
+            "output_tokens": usage.get("completion_tokens", 0) or 0, "thinking_tokens": 0})
+
+
 class FallbackProvider:
     """Use a second configured provider only after a retryable primary failure."""
     def __init__(self, primary, fallback):
@@ -185,8 +222,17 @@ class FallbackProvider:
 
 def load_provider(env_file: Path | None, config: LLMConfig):
     selected = _env_value("TRACEROOT_PROVIDER", env_file).casefold()
-    if selected not in {"", "gemini", "openrouter", "fallback"}:
-        raise ModelFailure("provider_invalid", "TRACEROOT_PROVIDER must be gemini, openrouter, or fallback.")
+    if selected not in {"", "gemini", "openrouter", "azure", "fallback"}:
+        raise ModelFailure("provider_invalid", "TRACEROOT_PROVIDER must be gemini, openrouter, azure, or fallback.")
+    azure_key = _env_value("AZURE_FOUNDRY_API_KEY", env_file) or _env_value("AZURE_AI_FOUNDRY_API_KEY", env_file)
+    azure_endpoint = _env_value("AZURE_FOUNDRY_ENDPOINT", env_file) or _env_value("AZURE_AI_FOUNDRY_ENDPOINT", env_file)
+    azure_model = _env_value("AZURE_FOUNDRY_MODEL", env_file) or _env_value("AZURE_AI_FOUNDRY_MODEL", env_file)
+    azure = AzureFoundryProvider(config, azure_key, azure_endpoint, azure_model,
+        _env_value("AZURE_FOUNDRY_API_VERSION", env_file) or "2024-05-01-preview") if azure_key and azure_endpoint and azure_model else None
+    if selected == "azure":
+        if not azure:
+            raise ModelFailure("credential_missing", "Configure AZURE_FOUNDRY_ENDPOINT, AZURE_FOUNDRY_API_KEY, and AZURE_FOUNDRY_MODEL.")
+        return azure
     router_key = _env_value("OPENROUTER_API_KEY", env_file)
     router = OpenRouterProvider(config, router_key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
                                 _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1") if router_key else None
@@ -197,6 +243,8 @@ def load_provider(env_file: Path | None, config: LLMConfig):
     if not selected and router and not _env_value("GEMINI_API_KEY", env_file):
         return router
     gemini = GeminiProvider(config, load_api_key(env_file))
-    if selected == "fallback" or (not selected and router):
+    if selected == "fallback" or (not selected and (router or azure)):
+        if azure:
+            return FallbackProvider(gemini, azure)
         return FallbackProvider(gemini, router)
     return gemini

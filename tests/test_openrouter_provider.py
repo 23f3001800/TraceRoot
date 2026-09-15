@@ -25,6 +25,13 @@ def test_factory_can_select_direct_gemini(tmp_path):
     assert isinstance(load_provider(env, LLMConfig()), GeminiProvider)
 
 
+def test_factory_can_select_azure_foundry(tmp_path):
+    from traceroot.llms.provider import AzureFoundryProvider
+    env = tmp_path / ".env"
+    env.write_text("TRACEROOT_PROVIDER=azure\nAZURE_FOUNDRY_ENDPOINT=https://demo.services.ai.azure.com/models\nAZURE_FOUNDRY_API_KEY=key\nAZURE_FOUNDRY_MODEL=demo\n")
+    assert isinstance(load_provider(env, LLMConfig()), AzureFoundryProvider)
+
+
 def test_retryable_gemini_failure_uses_openrouter_fallback():
     from traceroot.llms.provider import FallbackProvider, ModelFailure, ModelReply
     class Primary:

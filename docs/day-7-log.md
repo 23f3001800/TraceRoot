@@ -132,3 +132,11 @@
 - BUG-006 reached five evidence calls and one proposed payment-status hypothesis.
 - Direct Gemini and configured fallback retries exhausted before the Auditor node.
 - State is paused and resumable: 7 tool calls and 6 model calls remain under the original budget.
+
+
+## 2026-09-15 - Azure Foundry provider
+
+- Added Azure AI Foundry model-inference REST provider and direct azure selection.
+- fallback now selects Azure after retryable Gemini failures when Azure is configured.
+- Added unit coverage for provider selection and request contract.
+- Current environment has no Azure Foundry endpoint, key, or deployed model variables, so the saved BUG-006 checkpoint cannot yet run with Azure.

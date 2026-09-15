@@ -107,17 +107,17 @@ observed scores only; never replace a failed or incomplete run with an estimate.
 | --- | --- | ---: | ---: | ---: | --- |
 | BUG-001 | ROOT_CAUSE_IDENTIFIED | 1/1 | 4 | - | Not run |
 | BUG-002 | ROOT_CAUSE_IDENTIFIED | 1/1 | 5 | - | Not run |
-| BUG-003 | PROVIDER_FAILURE | 0/1 | 7 | - | Not run |
+| BUG-003 | ROOT_CAUSE_IDENTIFIED | 1/1 | 8 | 13 | SUPPORTED |
 | BUG-004 | ROOT_CAUSE_IDENTIFIED | 1/1 | 3 | - | Not run |
 | BUG-005 | PROVIDER_FAILURE | 0/1 | 2 | - | Not run |
 | BUG-006 | INSUFFICIENT evidence | 0/1 | 5 | 19 | Correctly rejected weak RCA |
-| **Total** | **3 of 6 root causes** | **50%** |  |  | **1 of 1 weak RCA rejected** |
+| **Total** | **4 of 6 root causes** | **67%** |  |  | **1 of 1 weak RCA rejected** |
 
 BUG-006's Azure Evidence Auditor added no tools, one model call, 3,123 tokens,
 and 22.9 seconds. It required payment-handler, persistence, and correlated log
 evidence before accepting a root cause.
 
-BUG-003 and BUG-005 feedback-loop runs are pending explicit Azure egress approval; no score was changed.
+BUG-003 completed with Auditor support. BUG-005 reached Auditor feedback but stopped on invalid Investigator decisions; its score remains unchanged. See `docs/day-10-live-feedback-evaluation.md`.
 
 ### Score update rule
 

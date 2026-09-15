@@ -301,3 +301,10 @@
 
 - Score: 18 of 18 graph and provider tests passed.
 - OpenRouter retains strict schema mode; Azure uses compatible non-strict schema mode with local validation.
+
+
+## 2026-09-15 - Live feedback-loop evaluation
+
+- BUG-003: one additional read-only tool produced implementation evidence; Auditor returned SUPPORTED and root cause was identified.
+- BUG-005: Auditor returned INSUFFICIENT with specific database and pool evidence needs; three invalid Investigator decisions prevented tool selection.
+- Score updated to 4 of 6 root causes, or 67 percent.

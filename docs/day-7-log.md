@@ -83,3 +83,9 @@
 - Resumed BUG-006 under the Investigator-plus-Auditor graph.
 - The provider failed before the next investigator decision, so the Auditor was not called.
 - Reproduction and logs remain preserved at step 2; the run is resumable and did not replay tools.
+
+## 2026-09-15 — BUG-006 second auditor resume
+
+- Resumed BUG-006 from step 2 under the Investigator-plus-Auditor graph.
+- OpenRouter failed before the next investigator decision; Auditor was not called.
+- Checkpoint remains paused and resumable. Reproduction and runtime logs were not repeated.

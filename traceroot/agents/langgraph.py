@@ -181,6 +181,17 @@ def _request(runtime: GraphRuntime, instruction: str) -> list[dict]:
                 "instruction": instruction})}]
 
 
+
+def _auditor_final_report(state: dict, hypothesis: dict) -> dict:
+    """Build the fixed report contract after the Auditor supports a cited hypothesis."""
+    final = {"status": "ROOT_CAUSE_IDENTIFIED", "symptom": state["initial"]["task"]["bug_report"],
+        "reproduction_status": reproduction_status(state["steps"]), "root_cause": hypothesis["claim"],
+        "root_cause_category": "application", "affected_subsystem": state.get("current_subsystem") or "unknown",
+        "evidence": hypothesis["evidence"], "rejected_hypotheses": [], "confidence": hypothesis["confidence"],
+        "recommended_next_action": "Review the evidence-backed root cause before planning remediation.", "limitations": []}
+    validate_final(final, state["steps"])
+    return final
+
 def build_graph(runtime: GraphRuntime):
     graph = StateGraph(InvestigationState)
 
@@ -299,15 +310,10 @@ def build_graph(runtime: GraphRuntime):
             validate(audit, AUDIT_SCHEMA)
             verdict = audit["verdict"]
             if verdict == "SUPPORTED":
-                if audit["final_report"] is None:
-                    raise ValueError("SUPPORTED requires a final report.")
-                validate_final(audit["final_report"], state["steps"])
-                final = audit["final_report"]
-                matches = [h for h in state["hypotheses"] if h["status"] == "supported" and h["claim"] == final["root_cause"]]
-                if not matches or not any(all(item in h["evidence"] for item in final["evidence"]) for h in matches):
-                    raise ValueError("Root cause must match a supported hypothesis and evidence links.")
-            elif audit["final_report"] is not None:
-                raise ValueError("Only SUPPORTED may include a final report.")
+                matches = [h for h in state["hypotheses"] if h["status"] == "supported"]
+                if not matches:
+                    raise ValueError("SUPPORTED requires an evidence-linked supported hypothesis.")
+                _auditor_final_report(state, matches[0])
         except ValueError as exc:
             state["invalid"] += 1
             state["consecutive_invalid"] += 1
@@ -381,7 +387,8 @@ def build_graph(runtime: GraphRuntime):
 
     def root_cause_report(state: InvestigationState):
         runtime.state = state
-        state["final"] = state["evaluation"]["final_report"]
+        hypothesis = next(item for item in state["hypotheses"] if item["status"] == "supported")
+        state["final"] = _auditor_final_report(state, hypothesis)
         state["graph_next"] = "finalize"
         runtime.checkpoint("root_cause_report", "ROOT_CAUSE_IDENTIFIED")
         return state

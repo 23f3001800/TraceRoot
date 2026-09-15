@@ -128,4 +128,5 @@ available, and the auditor verdict when one ran.
 
 Latest implementation verification: **17/17 tests passed** on 2026-09-15 for the
 Auditor feedback loop, Azure provider, and OpenRouter provider.
+Latest score update: **17/17** after narrowing the Auditor to evidence validation and moving report construction to LangGraph.
 

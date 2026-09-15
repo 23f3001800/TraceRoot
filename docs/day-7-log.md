@@ -263,3 +263,16 @@
 
 - Score: 17 of 17 LangGraph and provider tests passed.
 - Covered legacy `evaluate_evidence` routing and null-final provider-failure recovery.
+
+
+## 2026-09-15 - Auditor report boundary correction
+
+- Auditor output now contains only verdict and evidence feedback; it cannot generate a root-cause report.
+- LangGraph creates the final structured report deterministically only after an evidence-linked supported hypothesis passes validation.
+- Auditor prompt now requires both runtime or reproduction evidence and independent subsystem confirmation for SUPPORTED.
+
+
+## 2026-09-15 - Auditor report boundary verification
+
+- Score: 17 of 17 LangGraph and provider tests passed.
+- Verified Auditor-only evidence output and deterministic validated root-cause reporting.

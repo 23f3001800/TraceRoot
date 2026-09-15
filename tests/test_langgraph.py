@@ -42,7 +42,7 @@ def evaluation_yes():
     items = final_report()["evidence"]
     return {"verdict": "SUPPORTED", "unsupported_claims": [], "missing_evidence": [],
             "required_next_evidence": [], "reason": "Runtime and source evidence agree.",
-            "evidence_supporting": items, "final_report": final_report()}
+            "evidence_supporting": items}
 
 def configure_tools(monkeypatch):
     import traceroot.agents.langgraph as module
@@ -105,7 +105,7 @@ def test_blocked_evaluation_routes_to_insufficient_evidence(active, monkeypatch)
     replies = [
         decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py"}}, [hypothesis("proposed")]),
         decision(None, [hypothesis("proposed")], reviewed_step=3, ready=True),
-        {"verdict": "INSUFFICIENT", "unsupported_claims": ["Connection mismatch is proven."], "evidence_supporting": [], "missing_evidence": ["No approved source is available."], "required_next_evidence": ["Confirm the configured destination."], "reason": "The candidate lacks source evidence.", "final_report": None},
+        {"verdict": "INSUFFICIENT", "unsupported_claims": ["Connection mismatch is proven."], "evidence_supporting": [], "missing_evidence": ["No approved source is available."], "required_next_evidence": ["Confirm the configured destination."], "reason": "The candidate lacks source evidence."},
         ModelFailure("provider_error", "Stopped after returning to Investigator.", False),
     ]
     provider = GraphProvider(replies)
@@ -124,7 +124,7 @@ def test_insufficient_audit_returns_investigator_for_new_evidence_then_reaudits(
     insufficient = {"verdict": "INSUFFICIENT", "unsupported_claims": ["The mismatch is fully proven."],
                     "missing_evidence": ["A second source observation is needed."],
                     "required_next_evidence": ["Confirm the configured destination in source."],
-                    "reason": "The first source observation is not enough.", "evidence_supporting": [runtime_evidence], "final_report": None}
+                    "reason": "The first source observation is not enough.", "evidence_supporting": [runtime_evidence]}
     gather = decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py", "start_line": 1, "end_line": 8}},
                       [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=3)
     ready_again = decision(None, [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=4, ready=True)

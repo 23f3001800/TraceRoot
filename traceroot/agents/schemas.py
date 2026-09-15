@@ -162,7 +162,7 @@ AUDIT_SCHEMA = obj({
     "verdict": {"type": "string", "enum": ["SUPPORTED", "INSUFFICIENT", "CONTRADICTED"]},
     "unsupported_claims": array(string(1600), 8), "missing_evidence": array(string(500), 10),
     "required_next_evidence": array(string(500), 10), "reason": string(1600),
-    "evidence_supporting": array(EVIDENCE, 15), "final_report": nullable(FINAL_SCHEMA),
+    "evidence_supporting": array(EVIDENCE, 15),
 })
 # Compatibility name for persisted Day 5 callers; new graph code uses AUDIT_SCHEMA.
 EVALUATION_SCHEMA = AUDIT_SCHEMA

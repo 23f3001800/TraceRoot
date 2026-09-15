@@ -126,3 +126,9 @@
 - `openrouter/free` returned a malformed structured response despite HTTP 200, so it is unsuitable for the strict agent contract.
 - Configured an explicitly structured-output-compatible free fallback model (`nex-agi/nex-n2.5-mini:free`) for local testing.
 - OpenRouter HTTP-200 malformed structured responses now classify as retryable `invalid_json`, not provider HTTP failures.
+
+## 2026-09-15 — BUG-006 retry budget exhausted
+
+- BUG-006 reached five evidence calls and one proposed payment-status hypothesis.
+- Direct Gemini and configured fallback retries exhausted before the Auditor node.
+- State is paused and resumable: 7 tool calls and 6 model calls remain under the original budget.

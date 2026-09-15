@@ -16,3 +16,10 @@ def test_factory_prefers_openrouter(tmp_path):
     env = tmp_path / ".env"
     env.write_text("OPENROUTER_API_KEY=key\n")
     assert isinstance(load_provider(env, LLMConfig()), OpenRouterProvider)
+
+
+def test_factory_can_select_direct_gemini(tmp_path):
+    from traceroot.llms.provider import GeminiProvider
+    env = tmp_path / ".env"
+    env.write_text("TRACEROOT_PROVIDER=gemini\nGEMINI_API_KEY=key\nOPENROUTER_API_KEY=other\n")
+    assert isinstance(load_provider(env, LLMConfig()), GeminiProvider)

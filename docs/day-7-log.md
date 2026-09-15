@@ -89,3 +89,9 @@
 - Resumed BUG-006 from step 2 under the Investigator-plus-Auditor graph.
 - OpenRouter failed before the next investigator decision; Auditor was not called.
 - Checkpoint remains paused and resumable. Reproduction and runtime logs were not repeated.
+
+
+## 2026-09-15 ? Direct Gemini selection
+
+- Confirmed both Gemini and OpenRouter keys are configured without reading key values.
+- Added `TRACEROOT_PROVIDER=gemini` to select the direct Gemini provider when OpenRouter is also configured.

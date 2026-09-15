@@ -162,9 +162,13 @@ class OpenRouterProvider:
 
 
 def load_provider(env_file: Path | None, config: LLMConfig):
-    key = _env_value("OPENROUTER_API_KEY", env_file)
-    if key:
-        return OpenRouterProvider(config, key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
-                                  _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1")
+    selected = _env_value("TRACEROOT_PROVIDER", env_file).casefold()
+    if selected not in {"", "gemini", "openrouter"}:
+        raise ModelFailure("provider_invalid", "TRACEROOT_PROVIDER must be gemini or openrouter.")
+    if selected != "gemini":
+        key = _env_value("OPENROUTER_API_KEY", env_file)
+        if key:
+            return OpenRouterProvider(config, key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
+                                      _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1")
     return GeminiProvider(config, load_api_key(env_file))
 

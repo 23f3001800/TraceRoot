@@ -126,6 +126,6 @@ corresponding dated entry in `docs/day-7-log.md` before committing. Include stat
 root-cause score, tool calls, model calls, tokens when available, latency when
 available, and the auditor verdict when one ran.
 
-Latest implementation verification: **16/16 tests passed** on 2026-09-15 for the
+Latest implementation verification: **17/17 tests passed** on 2026-09-15 for the
 Auditor feedback loop, Azure provider, and OpenRouter provider.
 

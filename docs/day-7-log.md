@@ -251,3 +251,15 @@
 
 - Score: 16 of 16 LangGraph and provider tests passed.
 - The dedicated Auditor module has an evidence-only input boundary test.
+
+
+## 2026-09-15 - BUG-005 legacy null-final resume
+
+- BUG-005 exposed a legacy checkpoint with `final: null`.
+- Resume now treats a null final report as no final report; evidence remains unchanged.
+
+
+## 2026-09-15 - Legacy recovery verification
+
+- Score: 17 of 17 LangGraph and provider tests passed.
+- Covered legacy `evaluate_evidence` routing and null-final provider-failure recovery.

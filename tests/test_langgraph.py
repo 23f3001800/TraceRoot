@@ -150,3 +150,14 @@ def test_legacy_evaluation_transition_migrates_to_auditor():
     state = migrate_state({"version": 2, "graph_next": "evaluate_evidence", "audits": []})
     assert state["graph_next"] == "evidence_auditor"
     assert state["audit_cycles"] == 0
+
+
+def test_legacy_null_final_resume_is_safe(active, monkeypatch):
+    configure_tools(monkeypatch)
+    failed = investigate_graph(active, task(active), GraphProvider([ModelFailure("provider_error", "temporary", True)], retries=0))
+    saved = load_state(active, failed["summary"]["run_id"])
+    saved["final"] = None
+    from traceroot.agents.state import atomic_json, run_directory
+    atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
+    resumed = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"])
+    assert resumed["final"]["status"] == "PROVIDER_FAILURE"

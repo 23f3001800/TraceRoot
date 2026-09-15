@@ -449,7 +449,8 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
             state["resume_count"] += 1
             state["phase"] = "running"
             previous_provider_failure = bool(state.get("provider_failures"))
-            if state.get("final", {}).get("status") == "PROVIDER_FAILURE" and (state.get("limitation") in {"provider_error", "model_timeout"} or previous_provider_failure):
+            if ((state.get("final") or {}).get("status") == "PROVIDER_FAILURE" or
+                    (state.get("final") is None and state.get("graph_next") == "finalize" and previous_provider_failure)) and                     (state.get("limitation") in {"provider_error", "model_timeout"} or previous_provider_failure):
                 state["final"] = None
                 state["provider_retry_count"] = 0
                 state["graph_next"] = state.get("recovery_target") or "investigate"

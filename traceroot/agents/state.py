@@ -18,7 +18,7 @@ STATE_SCHEMA = obj({
     "observations": array({"type": "object"}, 15), "evidence": array({"type": "object"}, 120),
     "tool_history": array({"type": "object"}, 15), "provider_errors": array({"type": "object"}, 60),
     "current_subsystem": nullable(string(200)), "status": string(100), "step_count": integer(0, 15),
-    "model_calls": integer(0, 60), "provider_retry_count": integer(0, 3), "evaluation": nullable({"type": "object"}), "audits": array({"type": "object"}, 15),
+    "model_calls": integer(0, 60), "provider_retry_count": integer(0, 3), "evaluation": nullable({"type": "object"}), "audits": array({"type": "object"}, 15), "audit_cycles": integer(0, 3),
     "planned_action": nullable({"type": "object"}), "recovery_target": nullable(string(100)), "limitation": nullable(string(500)),
     "reviewed_step": integer(0, 15), "pending_model": {"type": "boolean"}, "pending_action": nullable({"type": "object"}),
     "transcript": array(obj({"role": {"enum": ["user", "model"]}, "text": string(250000)}), 100),
@@ -86,6 +86,7 @@ def sync_investigation_view(state):
 
 def migrate_state(state):
     state.setdefault("audits", [])
+    state.setdefault("audit_cycles", len(state["audits"]))
     if state.get("version") == 1:
         state["version"] = 2
         state["graph_next"] = state.get("graph_next") or "reproduce"

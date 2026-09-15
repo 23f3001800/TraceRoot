@@ -209,3 +209,18 @@
 
 - README now has the observed six-bug scorecard: 3 of 6 root causes, or 50 percent.
 - Every test, benchmark, resume, and auditor run must update the README scorecard and this dated log before commit.
+
+
+## 2026-09-15 - Auditor feedback loop
+
+- Auditor contract now requires unsupported claims, missing evidence, required next evidence, and a reason.
+- INSUFFICIENT routes through a deterministic feedback node, then returns tool selection to the Investigator.
+- CONTRADICTED reopens investigation; SUPPORTED still produces the root-cause report.
+- Audit cycles are persisted and bounded at three.
+
+
+## 2026-09-15 - Auditor feedback-loop verification
+
+- Score: 14 of 14 LangGraph and provider tests passed.
+- Covered INSUFFICIENT to Investigator-selected tool to re-audit to SUPPORTED.
+- Covered Azure and OpenRouter provider contracts.

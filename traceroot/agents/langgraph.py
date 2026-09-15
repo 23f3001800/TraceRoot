@@ -52,6 +52,7 @@ class InvestigationState(TypedDict, total=False):
     provider_retry_count: int
     evaluation: dict[str, Any] | None
     audits: list[dict[str, Any]]
+    audit_cycles: int
     incident: dict[str, Any]
     reproduction: dict[str, Any] | None
     observations: list[dict[str, Any]]
@@ -66,7 +67,7 @@ class InvestigationState(TypedDict, total=False):
     recovery_target: str
     planned_action: dict[str, Any]
 
-AUDITOR_PROMPT = """You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. Return INSUFFICIENT and state exactly what evidence the Investigator must collect. Return CONTRADICTED when cited evidence conflicts with the claim. Never select tools, edit hypotheses, invent evidence, or agree without verification."""
+AUDITOR_PROMPT = """You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. For INSUFFICIENT or CONTRADICTED, state unsupported claims, the evidence missing, and the evidence required next. Describe needed evidence, never a tool to call. Never select tools, edit hypotheses, invent evidence, or agree without verification."""
 
 
 class GraphRuntime:
@@ -327,12 +328,26 @@ def build_graph(runtime: GraphRuntime):
         state["consecutive_invalid"] = 0
         state["evaluation"] = audit
         state["audits"].append(audit)
+        state["audit_cycles"] += 1
         if audit["verdict"] == "SUPPORTED":
             state["graph_next"] = "root_cause_report"
+        elif state["audit_cycles"] >= 3:
+            state["limitation"] = "audit_cycle_budget"
+            state["graph_next"] = "report_limitation"
+        elif audit["verdict"] == "INSUFFICIENT":
+            state["graph_next"] = "investigate_missing_evidence"
         else:
-            state["transcript"].append({"role": "user", "text": json.dumps({"auditor_verdict": audit["verdict"], "required_next_evidence": audit["required_next_evidence"], "contradictions": audit["contradictions"]})})
+            state["transcript"].append({"role": "user", "text": json.dumps({"auditor_verdict": "CONTRADICTED", "unsupported_claims": audit["unsupported_claims"], "missing_evidence": audit["missing_evidence"], "required_next_evidence": audit["required_next_evidence"], "reason": audit["reason"], "instruction": "Reopen hypotheses and choose evidence needed to resolve the contradiction."})})
             state["graph_next"] = "investigate"
         runtime.checkpoint("evidence_auditor", audit["verdict"])
+        return state
+
+    def investigate_missing_evidence(state: InvestigationState):
+        runtime.state = state
+        audit = state["audits"][-1]
+        state["transcript"].append({"role": "user", "text": json.dumps({"auditor_verdict": "INSUFFICIENT", "unsupported_claims": audit["unsupported_claims"], "missing_evidence": audit["missing_evidence"], "required_next_evidence": audit["required_next_evidence"], "reason": audit["reason"], "instruction": "Choose the permitted tool that best gathers this evidence. The Auditor does not choose tools."})})
+        state["graph_next"] = "investigate"
+        runtime.checkpoint("investigate_missing_evidence")
         return state
 
     def recovery(state: InvestigationState):
@@ -396,14 +411,15 @@ def build_graph(runtime: GraphRuntime):
     graph.add_node("investigate", investigate)
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("evidence_auditor", evidence_auditor)
+    graph.add_node("investigate_missing_evidence", investigate_missing_evidence)
     graph.add_node("recovery", recovery)
     graph.add_node("report_limitation", report_limitation)
     graph.add_node("root_cause_report", root_cause_report)
     graph.add_node("finalize", finalize)
     routes = {name: name for name in ["reproduce", "collect_runtime_evidence", "investigate", "execute_tool",
-        "evidence_auditor", "recovery", "report_limitation", "root_cause_report", "finalize"]}
+        "evidence_auditor", "investigate_missing_evidence", "recovery", "report_limitation", "root_cause_report", "finalize"]}
     graph.add_conditional_edges(START, lambda state: state.get("graph_next") or "reproduce", routes)
-    for name in ["check_budget", "reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "evidence_auditor", "recovery", "report_limitation", "root_cause_report"]:
+    for name in ["check_budget", "reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "evidence_auditor", "investigate_missing_evidence", "recovery", "report_limitation", "root_cause_report"]:
         graph.add_edge(name, "check_budget") if name != "check_budget" else None
     graph.add_conditional_edges("check_budget", lambda state: state.get("graph_next") or "report_limitation", routes)
     graph.add_edge("finalize", END)
@@ -421,7 +437,7 @@ def _initial_state(context, task, provider, budget):
         "pending_action": None, "pending_model": False, "transcript": [], "events": [], "provider_failures": [], "tool_failures": [],
         "turns": 0, "decisions": 0, "invalid": 0, "consecutive_invalid": 0, "resume_count": 0,
         "elapsed_seconds": 0.0, "usage": {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0},
-        "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None, "audits": [],
+        "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None, "audits": [], "audit_cycles": 0,
         "incident": {}, "reproduction": None, "observations": [], "evidence": [], "tool_history": [], "provider_errors": [],
         "current_subsystem": None, "status": "RUNNING", "step_count": 0, "model_calls": 0,
         "planned_action": None, "recovery_target": None, "limitation": None}

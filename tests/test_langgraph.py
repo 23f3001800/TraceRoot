@@ -40,9 +40,9 @@ def final_report():
 
 def evaluation_yes():
     items = final_report()["evidence"]
-    return {"verdict": "SUPPORTED", "claims_checked": [final_report()["root_cause"]],
-            "evidence_supporting": items, "evidence_missing": [], "contradictions": [],
-            "required_next_evidence": [], "final_report": final_report()}
+    return {"verdict": "SUPPORTED", "unsupported_claims": [], "missing_evidence": [],
+            "required_next_evidence": [], "reason": "Runtime and source evidence agree.",
+            "evidence_supporting": items, "final_report": final_report()}
 
 def configure_tools(monkeypatch):
     import traceroot.agents.langgraph as module
@@ -67,7 +67,7 @@ def test_langgraph_has_explicit_nodes_and_conditional_routing(active):
     directory = active.session_dir / "agent-runs" / state["run_id"]
     directory.mkdir(parents=True)
     graph = build_graph(GraphRuntime(active, provider, Budget(), directory, state))
-    assert {"reproduce", "collect_runtime_evidence", "investigate", "evidence_auditor",
+    assert {"reproduce", "collect_runtime_evidence", "investigate", "evidence_auditor", "investigate_missing_evidence",
             "recovery", "report_limitation", "root_cause_report", "finalize", "check_budget"} <= set(graph.get_graph().nodes)
 
 def test_bug_investigates_through_graph_and_finalizes_supported_root_cause(active, monkeypatch):
@@ -105,10 +105,33 @@ def test_blocked_evaluation_routes_to_insufficient_evidence(active, monkeypatch)
     replies = [
         decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py"}}, [hypothesis("proposed")]),
         decision(None, [hypothesis("proposed")], reviewed_step=3, ready=True),
-        {"verdict": "INSUFFICIENT", "claims_checked": [], "evidence_supporting": [], "evidence_missing": ["No approved source is available."], "contradictions": [], "required_next_evidence": ["Collect approved source evidence."], "final_report": None},
+        {"verdict": "INSUFFICIENT", "unsupported_claims": ["Connection mismatch is proven."], "evidence_supporting": [], "missing_evidence": ["No approved source is available."], "required_next_evidence": ["Confirm the configured destination."], "reason": "The candidate lacks source evidence.", "final_report": None},
         ModelFailure("provider_error", "Stopped after returning to Investigator.", False),
     ]
     provider = GraphProvider(replies)
     result = investigate_graph(active, task(active), provider)
     assert result["final"]["status"] == "PROVIDER_FAILURE"
-    assert provider.requests[-1][0] != "You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. Return INSUFFICIENT and state exactly what evidence the Investigator must collect. Return CONTRADICTED when cited evidence conflicts with the claim. Never select tools, edit hypotheses, invent evidence, or agree without verification."
+    assert provider.requests[-1][0] != provider.requests[-2][0]
+
+
+def test_insufficient_audit_returns_investigator_for_new_evidence_then_reaudits(active, monkeypatch):
+    configure_tools(monkeypatch)
+    runtime_evidence = evidence(2, "/data/entries/0/message", "connection refused to port 9001")
+    source_evidence = evidence(3, "/data/lines/0/text", "configured_port = 9000")
+    first = decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py"}},
+                     [hypothesis("proposed", [runtime_evidence])])
+    ready = decision(None, [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=3, ready=True)
+    insufficient = {"verdict": "INSUFFICIENT", "unsupported_claims": ["The mismatch is fully proven."],
+                    "missing_evidence": ["A second source observation is needed."],
+                    "required_next_evidence": ["Confirm the configured destination in source."],
+                    "reason": "The first source observation is not enough.", "evidence_supporting": [runtime_evidence], "final_report": None}
+    gather = decision({"name": "read_file", "arguments": {"repository": active.repository.source, "file_path": "app/main.py", "start_line": 1, "end_line": 8}},
+                      [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=3)
+    ready_again = decision(None, [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=4, ready=True)
+    result = investigate_graph(active, task(active), GraphProvider([first, ready, insufficient, gather, ready_again, evaluation_yes()]))
+    saved = load_state(active, result["summary"]["run_id"])
+    assert result["final"]["status"] == "ROOT_CAUSE_IDENTIFIED"
+    assert saved["audit_cycles"] == 2
+    assert saved["steps"][-1]["tool"] == "read_file"
+    assert any(event["node"] == "investigate_missing_evidence" for event in saved["events"])
+    assert any("The Auditor does not choose tools" in entry["text"] for entry in saved["transcript"])

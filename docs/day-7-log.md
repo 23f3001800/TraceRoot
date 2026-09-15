@@ -231,3 +231,23 @@
 - The updated loop is implemented and locally verified, but no live BUG-003 or BUG-005 Azure run occurred.
 - Automatic approval review rejected both resumes because Azure egress authorization currently covers only BUG-006.
 - Both saved checkpoints remain unchanged and resumable.
+
+
+## 2026-09-15 - BUG-003 and BUG-005 feedback-loop resumes
+
+- BUG-003 retained seven evidence calls but Azure failed before the Auditor; it remains resumable.
+- BUG-005 found a legacy `evaluate_evidence` checkpoint transition that no longer matched the graph node name.
+- Added a migration from that transition to `evidence_auditor`; no target-app tool replay occurred.
+
+
+## 2026-09-15 - Explicit Evidence Auditor module
+
+- Extracted the Evidence Auditor to `traceroot/agents/auditor.py`.
+- It exposes only the audit prompt, schema, and evidence-only request builder.
+- LangGraph now routes to that module; it retains no tool catalog or transcript access.
+
+
+## 2026-09-15 - Auditor module verification
+
+- Score: 16 of 16 LangGraph and provider tests passed.
+- The dedicated Auditor module has an evidence-only input boundary test.

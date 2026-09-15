@@ -87,6 +87,8 @@ def sync_investigation_view(state):
 def migrate_state(state):
     state.setdefault("audits", [])
     state.setdefault("audit_cycles", len(state["audits"]))
+    if state.get("graph_next") == "evaluate_evidence":
+        state["graph_next"] = "evidence_auditor"
     if state.get("version") == 1:
         state["version"] = 2
         state["graph_next"] = state.get("graph_next") or "reproduce"

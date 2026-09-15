@@ -17,6 +17,7 @@ from ..tools import TOOLS
 from .investigator import (Budget, DeadlineExpired, deadline, fallback, observation_view,
                            reproduction_status, validate_final, validate_hypotheses, validate_task)
 from .prompt import SYSTEM_PROMPT
+from .auditor import AUDITOR_PROMPT, audit_request
 from .schemas import (CATALOG, AUDIT_SCHEMA, FINAL_SCHEMA, INVESTIGATION_DECISION_SCHEMA,
                       TOOL_INPUTS, output_schema, validate)
 from .state import STATE_SCHEMA, atomic_json, load_state, run_directory, session_lock, sync_investigation_view
@@ -66,8 +67,6 @@ class InvestigationState(TypedDict, total=False):
     limitation: str | None
     recovery_target: str
     planned_action: dict[str, Any]
-
-AUDITOR_PROMPT = """You are the Evidence Auditor in a read-only incident investigation. You have no tools and cannot investigate. Inspect only the supplied incident, candidate hypotheses, and cited tool observations. Check whether each claimed cause correlates with the reproduced incident, whether citations support it, and whether observations contradict it. Return SUPPORTED only for a candidate root cause backed by concrete evidence. For INSUFFICIENT or CONTRADICTED, state unsupported claims, the evidence missing, and the evidence required next. Describe needed evidence, never a tool to call. Never select tools, edit hypotheses, invent evidence, or agree without verification."""
 
 
 class GraphRuntime:
@@ -182,14 +181,6 @@ def _request(runtime: GraphRuntime, instruction: str) -> list[dict]:
                 "instruction": instruction})}]
 
 
-def _audit_request(runtime: GraphRuntime) -> list[dict]:
-    state = runtime.state
-    return [{"role": "user", "text": json.dumps({
-        "incident": state["incident"], "reproduction": state["reproduction"],
-        "observations": state["observations"], "hypotheses": state["hypotheses"],
-        "evidence": state["evidence"],
-        "instruction": "Audit the candidate root-cause claims and their cited evidence. You have no tools."})}]
-
 def build_graph(runtime: GraphRuntime):
     graph = StateGraph(InvestigationState)
 
@@ -301,7 +292,7 @@ def build_graph(runtime: GraphRuntime):
 
     def evidence_auditor(state: InvestigationState):
         runtime.state = state
-        audit = runtime.call_model(AUDITOR_PROMPT, _audit_request(runtime), AUDIT_SCHEMA, "evidence_auditor")
+        audit = runtime.call_model(AUDITOR_PROMPT, audit_request(runtime.state), AUDIT_SCHEMA, "evidence_auditor")
         if audit is None:
             return state
         try:

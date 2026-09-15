@@ -135,3 +135,18 @@ def test_insufficient_audit_returns_investigator_for_new_evidence_then_reaudits(
     assert saved["steps"][-1]["tool"] == "read_file"
     assert any(event["node"] == "investigate_missing_evidence" for event in saved["events"])
     assert any("The Auditor does not choose tools" in entry["text"] for entry in saved["transcript"])
+
+
+def test_auditor_receives_evidence_only():
+    from traceroot.agents.auditor import audit_request
+    request = audit_request({"incident": {"id": "x"}, "reproduction": {}, "observations": [], "hypotheses": [], "evidence": []})
+    import json
+    payload = json.loads(request[0]["text"])
+    assert len(request) == 1 and "tools" not in payload and "transcript" not in payload
+
+
+def test_legacy_evaluation_transition_migrates_to_auditor():
+    from traceroot.agents.state import migrate_state
+    state = migrate_state({"version": 2, "graph_next": "evaluate_evidence", "audits": []})
+    assert state["graph_next"] == "evidence_auditor"
+    assert state["audit_cycles"] == 0

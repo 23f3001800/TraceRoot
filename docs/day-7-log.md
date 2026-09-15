@@ -224,3 +224,10 @@
 - Score: 14 of 14 LangGraph and provider tests passed.
 - Covered INSUFFICIENT to Investigator-selected tool to re-audit to SUPPORTED.
 - Covered Azure and OpenRouter provider contracts.
+
+
+## 2026-09-15 - BUG-003 and BUG-005 Azure approval boundary
+
+- The updated loop is implemented and locally verified, but no live BUG-003 or BUG-005 Azure run occurred.
+- Automatic approval review rejected both resumes because Azure egress authorization currently covers only BUG-006.
+- Both saved checkpoints remain unchanged and resumable.

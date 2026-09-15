@@ -117,6 +117,8 @@ BUG-006's Azure Evidence Auditor added no tools, one model call, 3,123 tokens,
 and 22.9 seconds. It required payment-handler, persistence, and correlated log
 evidence before accepting a root cause.
 
+BUG-003 and BUG-005 feedback-loop runs are pending explicit Azure egress approval; no score was changed.
+
 ### Score update rule
 
 Every test, benchmark, resume, or auditor run must update this scorecard and the

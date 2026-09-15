@@ -189,7 +189,7 @@ class AzureFoundryProvider:
             payload["max_completion_tokens"] = payload.pop("max_tokens")
             payload.pop("temperature")
             payload["response_format"] = {"type": "json_schema", "json_schema": {
-                "name": "traceroot_decision", "strict": True, "schema": generation_schema(schema)}}
+                "name": "traceroot_decision", "strict": False, "schema": generation_schema(schema)}}
         try:
             response = httpx.post(url, headers={"api-key": self.api_key, "Content-Type": "application/json"},
                 params=params, json=payload, timeout=max(1, timeout))

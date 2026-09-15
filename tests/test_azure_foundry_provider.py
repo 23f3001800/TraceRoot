@@ -43,3 +43,4 @@ def test_azure_openai_v1_uses_deployment_endpoint(monkeypatch):
     assert "max_tokens" not in captured["json"]
     assert "temperature" not in captured["json"]
     assert captured["json"]["response_format"]["type"] == "json_schema"
+    assert captured["json"]["response_format"]["json_schema"]["strict"] is False

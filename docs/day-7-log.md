@@ -288,3 +288,16 @@
 
 - Score: 18 of 18 LangGraph and provider tests passed.
 - Verified retry-invalid reopens only the eligible invalid-decision checkpoint while retaining tool evidence.
+
+
+## 2026-09-15 - Azure optional-schema compatibility
+
+- Azure strict JSON Schema rejected optional investigator tool fields in BUG-003.
+- Azure now receives non-strict JSON Schema; TraceRoot retains authoritative local schema validation.
+- A live BUG-003 compatibility request returned HTTP 200.
+
+
+## 2026-09-15 - Azure optional-schema verification
+
+- Score: 18 of 18 graph and provider tests passed.
+- OpenRouter retains strict schema mode; Azure uses compatible non-strict schema mode with local validation.

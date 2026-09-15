@@ -35,6 +35,7 @@ def main():
     resume.add_argument("--session", type=Path, required=True)
     resume.add_argument("--run-id", required=True)
     resume.add_argument("--env-file", type=Path, default=Path(".env"))
+    resume.add_argument("--retry-invalid", action="store_true", help="Retry a finished invalid-decision checkpoint after a contract update.")
     commands.add_parser("tool-schemas", help="Print the six model-facing tool contracts")
     args = parser.parse_args()
     try:
@@ -56,6 +57,7 @@ def main():
                     Budget(args.max_tool_calls, args.max_seconds, args.model_timeout, args.max_model_calls) if args.command == "investigate" else Budget(),
                     progress=lambda event: print(json.dumps(event), file=sys.stderr, flush=True),
                     resume_run_id=args.run_id if args.command == "resume" else None,
+                    retry_invalid=args.retry_invalid if args.command == "resume" else False,
                 )
             except ModelFailure as exc:
                 print(json.dumps({"status": "TOOL_FAILURE", "error": {"code": exc.code, "message": exc.message}}))

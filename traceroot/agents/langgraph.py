@@ -441,7 +441,7 @@ def _initial_state(context, task, provider, budget):
         "planned_action": None, "recovery_target": None, "limitation": None}
 
 
-def investigate_graph(context, task, provider, budget=Budget(), progress=None, *, resume_run_id=None):
+def investigate_graph(context, task, provider, budget=Budget(), progress=None, *, resume_run_id=None, retry_invalid=False):
     """Run or resume the Day 5 LangGraph state machine using one existing checkpoint."""
     with session_lock(context):
         if resume_run_id:
@@ -451,8 +451,15 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
                 raise ValueError("Resume cannot change the original task.")
             task = initial["task"]
             budget = Budget(**initial["budget"])
-            if state["phase"] == "finished":
+            can_retry_invalid = retry_invalid and (state.get("final") or {}).get("status") == "TOOL_FAILURE" and state.get("limitation") == "invalid_decisions"
+            if state["phase"] == "finished" and not can_retry_invalid:
                 return _result(context, provider, budget, state, run_directory(context, state["run_id"]))
+            if can_retry_invalid:
+                state["final"] = None
+                state["invalid"] = 0
+                state["consecutive_invalid"] = 0
+                state["limitation"] = None
+                state["graph_next"] = "evidence_auditor"
             state["resume_count"] += 1
             state["phase"] = "running"
             previous_provider_failure = bool(state.get("provider_failures"))

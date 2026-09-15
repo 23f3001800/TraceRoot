@@ -276,3 +276,15 @@
 
 - Score: 17 of 17 LangGraph and provider tests passed.
 - Verified Auditor-only evidence output and deterministic validated root-cause reporting.
+
+
+## 2026-09-15 - Retry invalid checkpoint mode
+
+- Added explicit `resume --retry-invalid` for a finished checkpoint stopped by invalid decisions after a contract update.
+- It preserves evidence and cumulative budgets, resets only invalid-decision counters, and returns to the Auditor.
+
+
+## 2026-09-15 - Retry invalid verification
+
+- Score: 18 of 18 LangGraph and provider tests passed.
+- Verified retry-invalid reopens only the eligible invalid-decision checkpoint while retaining tool evidence.

@@ -161,3 +161,14 @@ def test_legacy_null_final_resume_is_safe(active, monkeypatch):
     atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
     resumed = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"])
     assert resumed["final"]["status"] == "PROVIDER_FAILURE"
+
+
+def test_retry_invalid_reopens_only_invalid_finished_checkpoint(active, monkeypatch):
+    configure_tools(monkeypatch)
+    failed = investigate_graph(active, task(active), GraphProvider([ModelFailure("provider_error", "temporary", True)], retries=0))
+    saved = load_state(active, failed["summary"]["run_id"])
+    saved.update({"phase": "finished", "final": {**failed["final"], "status": "TOOL_FAILURE"}, "limitation": "invalid_decisions", "graph_next": "finalize", "hypotheses": [hypothesis("supported", [evidence(1, "/data/http_observations/0/observed", "500"), evidence(2, "/data/entries/0/message", "connection refused to port 9001")]) ]})
+    from traceroot.agents.state import atomic_json, run_directory
+    atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
+    reopened = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"], retry_invalid=True)
+    assert reopened["final"]["status"] == "PROVIDER_FAILURE" and reopened["summary"]["tool_calls"] == 2

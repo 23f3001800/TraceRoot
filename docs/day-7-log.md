@@ -95,3 +95,10 @@
 
 - Confirmed both Gemini and OpenRouter keys are configured without reading key values.
 - Added `TRACEROOT_PROVIDER=gemini` to select the direct Gemini provider when OpenRouter is also configured.
+
+## 2026-09-15 — Gemini with OpenRouter fallback
+
+- Added `TRACEROOT_PROVIDER=fallback`: direct Gemini is primary and OpenRouter is used only after a retryable primary failure.
+- Explicit `gemini` and `openrouter` modes remain available.
+- Successful fallback is retained in provider-failure history for auditability.
+- Focused provider and graph verification passed: `9 passed`.

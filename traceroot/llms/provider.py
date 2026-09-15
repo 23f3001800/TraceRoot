@@ -161,14 +161,39 @@ class OpenRouterProvider:
             "output_tokens": usage.get("completion_tokens", 0) or 0, "thinking_tokens": 0})
 
 
+class FallbackProvider:
+    """Use a second configured provider only after a retryable primary failure."""
+    def __init__(self, primary, fallback):
+        self.primary, self.fallback = primary, fallback
+        self.config = primary.config
+        self.last_failover = None
+
+    def generate(self, system: str, messages: list[dict], schema: dict, timeout: float) -> ModelReply:
+        self.last_failover = None
+        try:
+            return self.primary.generate(system, messages, schema, timeout)
+        except ModelFailure as failure:
+            if not failure.retryable:
+                raise
+            self.last_failover = {"code": failure.code, "message": failure.message,
+                                  "from": type(self.primary).__name__, "to": type(self.fallback).__name__}
+            return self.fallback.generate(system, messages, schema, timeout)
+
+
 def load_provider(env_file: Path | None, config: LLMConfig):
     selected = _env_value("TRACEROOT_PROVIDER", env_file).casefold()
-    if selected not in {"", "gemini", "openrouter"}:
-        raise ModelFailure("provider_invalid", "TRACEROOT_PROVIDER must be gemini or openrouter.")
-    if selected != "gemini":
-        key = _env_value("OPENROUTER_API_KEY", env_file)
-        if key:
-            return OpenRouterProvider(config, key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
-                                      _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1")
-    return GeminiProvider(config, load_api_key(env_file))
-
+    if selected not in {"", "gemini", "openrouter", "fallback"}:
+        raise ModelFailure("provider_invalid", "TRACEROOT_PROVIDER must be gemini, openrouter, or fallback.")
+    router_key = _env_value("OPENROUTER_API_KEY", env_file)
+    router = OpenRouterProvider(config, router_key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",
+                                _env_value("OPENROUTER_BASE_URL", env_file) or "https://openrouter.ai/api/v1") if router_key else None
+    if selected == "openrouter":
+        if not router:
+            raise ModelFailure("credential_missing", "Configure OPENROUTER_API_KEY for OpenRouter.")
+        return router
+    if not selected and router and not _env_value("GEMINI_API_KEY", env_file):
+        return router
+    gemini = GeminiProvider(config, load_api_key(env_file))
+    if selected == "fallback" or (not selected and router):
+        return FallbackProvider(gemini, router)
+    return gemini

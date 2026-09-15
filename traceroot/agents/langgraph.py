@@ -122,6 +122,10 @@ class GraphRuntime:
             with deadline(min(self.budget.model_timeout, remaining)):
                 reply = self.provider.generate(system, messages, schema, min(self.budget.model_timeout, remaining))
             self.state["pending_model"] = False
+            failover = getattr(self.provider, "last_failover", None)
+            if failover:
+                self.state["provider_failures"].append({**failover, "retryable": True,
+                    "after_step": len(self.state["steps"]), "target": target, "fallback_succeeded": True})
             for key in self.state["usage"]:
                 self.state["usage"][key] += reply.usage.get(key, 0)
             self.state["provider_retry_count"] = 0

@@ -23,3 +23,15 @@ def test_factory_can_select_direct_gemini(tmp_path):
     env = tmp_path / ".env"
     env.write_text("TRACEROOT_PROVIDER=gemini\nGEMINI_API_KEY=key\nOPENROUTER_API_KEY=other\n")
     assert isinstance(load_provider(env, LLMConfig()), GeminiProvider)
+
+
+def test_retryable_gemini_failure_uses_openrouter_fallback():
+    from traceroot.llms.provider import FallbackProvider, ModelFailure, ModelReply
+    class Primary:
+        config = LLMConfig()
+        def generate(self, *args): raise ModelFailure("provider_error", "temporary", True)
+    class Secondary:
+        def generate(self, *args): return ModelReply({"ok": True}, {})
+    provider = FallbackProvider(Primary(), Secondary())
+    assert provider.generate("", [], {}, 1).decision == {"ok": True}
+    assert provider.last_failover["from"] == "Primary"

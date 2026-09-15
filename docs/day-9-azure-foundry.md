@@ -24,3 +24,8 @@ TRACEROOT_PROVIDER=fallback uses Gemini first, then Azure Foundry when Azure con
 
 - Azure endpoint, key header, API version, JSON response request, and result parsing have unit coverage.
 - A live resume requires the three local Azure values above. They were absent from the current environment when this change was made.
+
+
+## Live validation
+
+Azure OpenAI gpt-5-mini completed a strict-schema Evidence Auditor call over the saved BUG-006 evidence. It returned INSUFFICIENT rather than accepting the candidate without persistence-path evidence.

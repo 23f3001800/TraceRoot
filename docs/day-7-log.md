@@ -174,3 +174,18 @@
 - Azure gpt-5-mini passed a minimal structured-output request.
 - The automatic approval review blocked the BUG-006 resume because its saved evidence would be sent to Azure.
 - The checkpoint remains intact at step 5 and will not rerun reproduction.
+
+
+## 2026-09-15 - Azure investigator schema enforcement
+
+- Azure completed BUG-006 decisions but three were rejected by the local decision contract.
+- Azure OpenAI v1 now receives the existing strict JSON Schema, matching the OpenRouter contract.
+- This changes output enforcement only; no target application operation is added.
+
+
+## 2026-09-15 - BUG-006 Azure Evidence Auditor
+
+- Azure Foundry gpt-5-mini audited the persisted BUG-006 candidate and evidence.
+- Verdict: INSUFFICIENT, with no contradictions.
+- It accepted reproduction evidence but required payment-handler source, ORM transaction evidence, and correlated runtime logs before supporting the root cause.
+- The Auditor did not select tools or modify the target application.

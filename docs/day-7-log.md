@@ -203,3 +203,9 @@
 | Tokens | 27,235 recorded investigator tokens | 1,710 input + 1,413 output |
 | Latency | 325.1 seconds recorded investigation time | 22.9 seconds Auditor call |
 | Auditor correctly rejects weak RCA | N/A | Yes |
+
+
+## 2026-09-15 - README score update rule
+
+- README now has the observed six-bug scorecard: 3 of 6 root causes, or 50 percent.
+- Every test, benchmark, resume, and auditor run must update the README scorecard and this dated log before commit.

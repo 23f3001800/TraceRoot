@@ -189,3 +189,17 @@
 - Verdict: INSUFFICIENT, with no contradictions.
 - It accepted reproduction evidence but required payment-handler source, ORM transaction evidence, and correlated runtime logs before supporting the root cause.
 - The Auditor did not select tools or modify the target application.
+
+
+## 2026-09-15 - BUG-006 single investigator versus Auditor
+
+| Metric | Single | Single + Auditor |
+| --- | --- | --- |
+| Correct root cause | No - provider failure before conclusion | No - Auditor returned INSUFFICIENT |
+| Unsupported conclusions | No final claim | 0 accepted unsupported claims |
+| Missed contradictory evidence | Not measurable | None reported |
+| Additional tool calls | 0 | 0 |
+| Model calls | 18 | 19 |
+| Tokens | 27,235 recorded investigator tokens | 1,710 input + 1,413 output |
+| Latency | 325.1 seconds recorded investigation time | 22.9 seconds Auditor call |
+| Auditor correctly rejects weak RCA | N/A | Yes |

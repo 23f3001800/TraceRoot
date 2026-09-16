@@ -151,3 +151,5 @@ Investigation can use an explicitly configured LocalRunner when Docker is unavai
 - Code search accepts an empty scope as the approved public repository root. Regression test added.
 
 - Read-file schema now matches its 200-line enforcement limit; invalid ranges are rejected before tool dispatch.
+
+- BUG-006 live graph run reached nine tools without rerunning reproduction, then ended MODEL_DECISION_FAILURE after Azure invalid JSON; Auditor was not reached.

@@ -358,3 +358,5 @@
 - BUG-006 live Investigator sent an empty search scope. Empty scope now means public repository root; this fixes a tool-contract usability defect.
 
 - BUG-006 second live run exposed a contract mismatch: read_file enforced 200 lines while its model schema allowed 1,000,199. Tightened the model schema so overlong reads become MODEL_DECISION_FAILURE before tool dispatch.
+
+- BUG-006 resumed graph reached nine read-only tool steps without rerunning reproduction, then ended MODEL_DECISION_FAILURE after Azure invalid JSON and bounded repair exhaustion; Auditor not reached.

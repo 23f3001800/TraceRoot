@@ -20,3 +20,9 @@ The Auditor reduces acceptance of unsupported diagnoses. This does not yet prove
 - DockerRunner prepared disposable target `/tmp/traceroot-bug006-ubVVRI/repo`.
 - Public test `tests/test_bug_006.py::test_completed_payment_persists_paid_order` failed: expected `paid`, observed `pending`; exit code 1; 1 failed; 0 errors.
 - This validates BUG-006 before any model call.
+
+## 2026-09-16 BUG-006 live graph run
+
+- Run 73bbf3062a3443a58e363cadc20cd762 preserved its reproduction through recovery and reached 9 tool steps.
+- Azure returned invalid JSON during investigation; two bounded decision repairs were exhausted. Final status: MODEL_DECISION_FAILURE. The Auditor was not called.
+- This is a model-output reliability result, not an application diagnosis.

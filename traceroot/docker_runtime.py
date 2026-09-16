@@ -108,7 +108,7 @@ def prepare(repository: Path, sessions: Path, docker_binary: str) -> Context:
     context = Context({
         "id": session_id, "repository": str(repository.resolve()),
         "snapshot": str((session_dir / "snapshot").resolve()), "manifest": manifest,
-        "docker": docker_binary, "image": f"traceroot-investigation:{session_id}",
+        "docker": docker_binary, "runner": "docker", "image": f"traceroot-investigation:{session_id}",
         "network": f"traceroot-{session_id}", "db": f"traceroot-db-{session_id}",
         "api": f"traceroot-api-{session_id}", "active": False,
         "app_password": secrets.token_hex(16), "inspector_password": secrets.token_hex(16),

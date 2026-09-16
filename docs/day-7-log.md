@@ -348,3 +348,7 @@
 - Added separate investigator/auditor/feedback token and latency measurements. Focused verification: 19 passed.
 
 - BUG-006 re-run: disposable target created, but deterministic Docker setup returned docker_unavailable; WSL reports Docker Desktop integration is disabled. No model or Auditor call was made.
+
+- Began TargetRunner abstraction: DockerRunner remains the default controlled backend; LocalRunner is investigation-only and denies reset. Initial focused tests exposed legacy runner-selection assumptions; compatibility correction is in progress.
+
+- TargetRunner compatibility correction verified: 17 reproduction/execution tests passed. Docker remains default; LocalRunner is opt-in and read-only.

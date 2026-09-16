@@ -140,3 +140,8 @@ Focused validation: **11/11 LangGraph tests passed** after canonical repository 
 - Focused LangGraph/provider tests: **19 passed**.
 
 - 2026-09-16 BUG-006 re-run: setup stopped as REPRODUCTION_UNAVAILABLE because Docker Desktop WSL integration is disabled; no agent calls were made.
+
+### Target execution boundary
+
+Investigation can use an explicitly configured LocalRunner when Docker is unavailable. DockerRunner remains default. Any future remediation must require DockerRunner; LocalRunner denies reset and is never an execution backend. TargetRunner exposes run_reproduction, run_tests, get_logs, and reset_target.
+- TargetRunner reproduction regression tests: **17 passed**.

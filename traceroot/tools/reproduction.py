@@ -1,5 +1,6 @@
 from ..contracts import ToolResult, tool
 from ..selection import reproduction_args
+from ..target_runner import runner_for
 from ..execution import execute_tests
 
 
@@ -15,7 +16,7 @@ def run_reproduction(context, repository_path: str,
     if type(consistency_attempts) is not int or not 1 <= consistency_attempts <= 3:
         raise ValueError("consistency_attempts must be between 1 and 3")
     args, reason = reproduction_args(context.repository, reproduction_command)
-    attempts = [execute_tests(context, args, timeout) for _ in range(consistency_attempts)]
+    attempts = [(runner_for(context).run_reproduction(args, timeout) if context.config.get('runner') else execute_tests(context, args, timeout)) for _ in range(consistency_attempts)]
     result = attempts[-1]
     if result.data is not None:
         result.data["selection_reason"] = reason

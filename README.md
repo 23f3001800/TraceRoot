@@ -153,3 +153,7 @@ Investigation can use an explicitly configured LocalRunner when Docker is unavai
 - Read-file schema now matches its 200-line enforcement limit; invalid ranges are rejected before tool dispatch.
 
 - BUG-006 live graph run reached nine tools without rerunning reproduction, then ended MODEL_DECISION_FAILURE after Azure invalid JSON; Auditor was not reached.
+
+### Remediation Planner
+
+A proposal-only Remediation Planner accepts only ROOT_CAUSE_SUPPORTED investigations. It returns proposed changes, validation, risk, and mandatory human approval. It has no tools or write permissions. Planner tests: 2 passed.

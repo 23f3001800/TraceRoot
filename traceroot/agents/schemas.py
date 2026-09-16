@@ -167,6 +167,17 @@ AUDIT_SCHEMA = obj({
     "required_next_evidence": array(string(500), 10), "reason": string(1600),
     "evidence_supporting": array(EVIDENCE, 15),
 })
+REMEDIATION_PLAN_SCHEMA = obj({
+    "status": {"type": "string", "enum": ["PROPOSAL_READY", "REQUIRES_HUMAN_REVIEW"]},
+    "root_cause_summary": string(1600), "proposed_changes": array(obj({
+        "file": string(500), "change": string(1600), "reason": string(800),
+    }), 10),
+    "validation_plan": array(string(800), 10),
+    "risk": {"type": "string", "enum": ["low", "medium", "high"]},
+    "risk_reasons": array(string(800), 10), "requires_human_approval": {"type": "boolean"},
+    "limitations": array(string(800), 10),
+})
+
 # Compatibility name for persisted Day 5 callers; new graph code uses AUDIT_SCHEMA.
 EVALUATION_SCHEMA = AUDIT_SCHEMA
 TASK_SCHEMA = obj({

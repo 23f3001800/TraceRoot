@@ -319,3 +319,14 @@
 
 - Score: 18 of 18 graph and provider tests passed.
 - Covered explicit decision modes and bounded structured repair handling.
+
+
+## 2026-09-16 - Canonical repository validation
+
+- BUG-005 exposed stale repository paths in model-selected tool arguments.
+- Decision validation now rejects any repository argument not identical to the checkpoint task repository before tool dispatch.
+
+## 2026-09-16 - Canonical repository verification
+
+- Score: 11 of 11 focused LangGraph tests passed.
+- Verified stale repository arguments are rejected before tool dispatch.

@@ -267,7 +267,12 @@ def build_graph(runtime: GraphRuntime):
                 raise ValueError("reviewed_step must equal the latest tool step.")
             validate_hypotheses(decision["hypotheses"], state["hypotheses"], state["steps"])
             if decision["action"] is not None:
-                validate(decision["action"]["arguments"], TOOL_INPUTS[decision["action"]["name"]])
+                arguments = decision["action"]["arguments"]
+                validate(arguments, TOOL_INPUTS[decision["action"]["name"]])
+                expected_repository = state["initial"]["task"]["repository"]
+                supplied_repository = arguments.get("repository", arguments.get("repository_path"))
+                if supplied_repository is not None and supplied_repository != expected_repository:
+                    raise ValueError("Tool repository must exactly match the investigation repository.")
         except ValueError as exc:
             state["invalid"] += 1
             state["consecutive_invalid"] += 1

@@ -175,3 +175,11 @@ def test_retry_invalid_reopens_only_invalid_finished_checkpoint(active, monkeypa
     atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
     reopened = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"], retry_invalid=True)
     assert reopened["final"]["status"] == "PROVIDER_FAILURE" and reopened["summary"]["tool_calls"] == 2
+
+
+def test_stale_tool_repository_is_repairable_decision_error(active, monkeypatch):
+    configure_tools(monkeypatch)
+    stale = decision({"name": "read_file", "arguments": {"repository": "/stale", "file_path": "app/main.py"}}, [hypothesis("proposed")])
+    result = investigate_graph(active, task(active), GraphProvider([stale, ModelFailure("provider_error", "temporary", False)]))
+    assert result["summary"]["tool_calls"] == 2
+    assert result["summary"]["invalid_decisions"] == 1

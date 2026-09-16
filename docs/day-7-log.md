@@ -362,3 +362,5 @@
 - BUG-006 resumed graph reached nine read-only tool steps without rerunning reproduction, then ended MODEL_DECISION_FAILURE after Azure invalid JSON and bounded repair exhaustion; Auditor not reached.
 
 - Added proposal-only Remediation Planner: it accepts only ROOT_CAUSE_SUPPORTED, has no tools or write capability, and requires human approval. Planner boundary tests: 2 passed.
+
+- Added Docker-only sandbox executor and verifier boundaries. Executor rejects LocalRunner, missing approval, foreign repositories, and malformed patches; patch application remains disabled. Tests: 2 passed.

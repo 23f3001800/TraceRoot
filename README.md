@@ -157,3 +157,7 @@ Investigation can use an explicitly configured LocalRunner when Docker is unavai
 ### Remediation Planner
 
 A proposal-only Remediation Planner accepts only ROOT_CAUSE_SUPPORTED investigations. It returns proposed changes, validation, risk, and mandatory human approval. It has no tools or write permissions. Planner tests: 2 passed.
+
+### Sandbox execution boundary
+
+Future execution is Docker-only. The executor requires a human approval ID, the registered disposable target, and one bounded unified diff. Patch application remains disabled. Verifier is Docker-only. Boundary tests: 2 passed.

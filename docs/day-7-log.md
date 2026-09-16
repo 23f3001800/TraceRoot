@@ -346,3 +346,5 @@
 
 - Day 11 control-plane hardening: strict investigator decisions and explicit failure taxonomy.
 - Added separate investigator/auditor/feedback token and latency measurements. Focused verification: 19 passed.
+
+- BUG-006 re-run: disposable target created, but deterministic Docker setup returned docker_unavailable; WSL reports Docker Desktop integration is disabled. No model or Auditor call was made.

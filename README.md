@@ -138,3 +138,5 @@ Focused validation: **11/11 LangGraph tests passed** after canonical repository 
 - Explicit result taxonomy separates reproduction, provider, decision, execution, permission, evidence, contradiction, and supported RCA.
 - Separate investigator, auditor, and feedback-investigator token and latency measurements.
 - Focused LangGraph/provider tests: **19 passed**.
+
+- 2026-09-16 BUG-006 re-run: setup stopped as REPRODUCTION_UNAVAILABLE because Docker Desktop WSL integration is disabled; no agent calls were made.

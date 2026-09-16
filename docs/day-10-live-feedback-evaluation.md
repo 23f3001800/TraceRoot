@@ -9,3 +9,8 @@
 BUG-003 reached support after the Investigator read the order-creation implementation. BUG-005 proves the Auditor returns useful evidence requirements, but stale checkpoint paths and earlier invalid decisions prevented a completed second cycle. A fresh BUG-006 reproduction was unavailable before any model or Auditor call, so it is not evaluated for this experiment.
 
 The Auditor reduces acceptance of unsupported diagnoses. This does not yet prove improved root-cause accuracy across incomplete cases.
+
+## 2026-09-16 control-plane re-run
+
+- BUG-006 disposable target setup was attempted. The WSL execution environment reports Docker unavailable and directs the operator to enable Docker Desktop WSL integration. TraceRoot stopped at deterministic setup; no model, Investigator, or Auditor call ran.
+- Result: REPRODUCTION_UNAVAILABLE pending Docker Desktop WSL integration. This does not satisfy the BUG-006 gate.

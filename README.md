@@ -145,3 +145,5 @@ Focused validation: **11/11 LangGraph tests passed** after canonical repository 
 
 Investigation can use an explicitly configured LocalRunner when Docker is unavailable. DockerRunner remains default. Any future remediation must require DockerRunner; LocalRunner denies reset and is never an execution backend. TargetRunner exposes run_reproduction, run_tests, get_logs, and reset_target.
 - TargetRunner reproduction regression tests: **17 passed**.
+
+- BUG-006 deterministic Docker reproduction: **reproduced** (public test expected paid, observed pending; 1 failed, 0 errors).

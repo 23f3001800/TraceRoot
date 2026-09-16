@@ -14,3 +14,9 @@ The Auditor reduces acceptance of unsupported diagnoses. This does not yet prove
 
 - BUG-006 disposable target setup was attempted. The WSL execution environment reports Docker unavailable and directs the operator to enable Docker Desktop WSL integration. TraceRoot stopped at deterministic setup; no model, Investigator, or Auditor call ran.
 - Result: REPRODUCTION_UNAVAILABLE pending Docker Desktop WSL integration. This does not satisfy the BUG-006 gate.
+
+## 2026-09-16 BUG-006 deterministic reproduction
+
+- DockerRunner prepared disposable target `/tmp/traceroot-bug006-ubVVRI/repo`.
+- Public test `tests/test_bug_006.py::test_completed_payment_persists_paid_order` failed: expected `paid`, observed `pending`; exit code 1; 1 failed; 0 errors.
+- This validates BUG-006 before any model call.

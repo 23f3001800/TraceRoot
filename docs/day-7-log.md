@@ -352,3 +352,5 @@
 - Began TargetRunner abstraction: DockerRunner remains the default controlled backend; LocalRunner is investigation-only and denies reset. Initial focused tests exposed legacy runner-selection assumptions; compatibility correction is in progress.
 
 - TargetRunner compatibility correction verified: 17 reproduction/execution tests passed. Docker remains default; LocalRunner is opt-in and read-only.
+
+- BUG-006 deterministic Docker reproduction passed the benchmark gate: the selected public regression test observed persisted status pending instead of paid.

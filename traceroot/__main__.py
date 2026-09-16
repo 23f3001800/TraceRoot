@@ -60,10 +60,10 @@ def main():
                     retry_invalid=args.retry_invalid if args.command == "resume" else False,
                 )
             except ModelFailure as exc:
-                print(json.dumps({"status": "TOOL_FAILURE", "error": {"code": exc.code, "message": exc.message}}))
+                print(json.dumps({"status": "MODEL_PROVIDER_FAILURE", "error": {"code": exc.code, "message": exc.message}}))
                 return 2
             print(json.dumps(result, indent=2))
-            return 0 if result["final"]["status"] == "ROOT_CAUSE_IDENTIFIED" else 1
+            return 0 if result["final"]["status"] == "ROOT_CAUSE_SUPPORTED" else 1
         if args.command == "prepare":
             ctx = prepare(args.repository, args.sessions.resolve(), args.docker)
             result = ToolResult("ok", {"session": str(ctx.session_dir), "repository": ctx.repository.source,

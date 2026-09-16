@@ -120,7 +120,7 @@ def output_schema(name):
 CATALOG = [{"name": name, "description": DESCRIPTIONS[name],
             "input_schema": schema, "output_schema": output_schema(name)} for name, schema in TOOL_INPUTS.items()]
 
-STATUSES = ["ROOT_CAUSE_IDENTIFIED", "INSUFFICIENT_EVIDENCE", "REPRODUCTION_FAILED", "PROVIDER_FAILURE", "TOOL_FAILURE", "MAX_STEPS_REACHED"]
+STATUSES = ["ROOT_CAUSE_SUPPORTED", "REPRODUCTION_FAILED", "REPRODUCTION_UNAVAILABLE", "MODEL_PROVIDER_FAILURE", "MODEL_DECISION_FAILURE", "TOOL_EXECUTION_FAILURE", "TOOL_PERMISSION_FAILURE", "INSUFFICIENT_EVIDENCE", "CONTRADICTED", "ROOT_CAUSE_IDENTIFIED", "PROVIDER_FAILURE", "TOOL_FAILURE", "MAX_STEPS_REACHED"]
 EVIDENCE = obj({
     "step": integer(1, 15), "pointer": string(300), "quote": {"type": "string", "minLength": 1, "maxLength": 800},
     "supports": string(400),
@@ -156,8 +156,9 @@ DECISION_SCHEMA = obj({
 INVESTIGATION_DECISION_SCHEMA = obj({
     "reviewed_step": integer(0, 15), "hypotheses": array(HYPOTHESIS, 8),
     "hypothesis_summary": string(300), "evidence_summary": string(300),
-    "decision_mode": {"type": "string", "enum": ["TOOL_CALL", "AUDIT", "BLOCKED"]},
-    "action": nullable(ACTION_SCHEMA), "ready_for_evaluation": {"type": "boolean"},
+    "action": {"type": "string", "enum": ["TOOL_CALL", "FINAL", "BLOCKED"]},
+    "tool": nullable({"type": "string", "enum": list(TOOL_INPUTS)}),
+    "arguments": nullable({"type": "object"}),
     "evidence_goal": string(400), "hypothesis_id": nullable({"type": "string", "pattern": "^H[1-9][0-9]?$"}),
 })
 AUDIT_SCHEMA = obj({

@@ -131,3 +131,10 @@ Auditor feedback loop, Azure provider, and OpenRouter provider.
 Latest score update: **18/18** after explicit Investigator decision validation and bounded repair.
 Focused validation: **11/11 LangGraph tests passed** after canonical repository validation.
 
+
+### Latest control-plane verification
+
+- Strict Investigator decisions: TOOL_CALL, FINAL, or BLOCKED; two invalid attempts end as MODEL_DECISION_FAILURE.
+- Explicit result taxonomy separates reproduction, provider, decision, execution, permission, evidence, contradiction, and supported RCA.
+- Separate investigator, auditor, and feedback-investigator token and latency measurements.
+- Focused LangGraph/provider tests: **19 passed**.

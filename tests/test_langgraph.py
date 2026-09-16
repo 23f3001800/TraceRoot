@@ -23,19 +23,20 @@ def hypothesis(status="supported", evidence_items=None):
             "status": status, "confidence": "high" if status == "supported" else "low",
             "evidence": evidence_items or [], "missing_evidence": [] if status != "proposed" else ["Runtime evidence."]}
 
-def decision(action, hypotheses, reviewed_step=2, ready=False, blocked=False):
-    mode = "BLOCKED" if blocked else ("AUDIT" if ready else "TOOL_CALL")
+def decision(tool_call, hypotheses, reviewed_step=2, ready=False, blocked=False):
+    mode = "BLOCKED" if blocked else ("FINAL" if ready else "TOOL_CALL")
     return {"reviewed_step": reviewed_step, "hypotheses": hypotheses,
             "hypothesis_summary": "Evidence narrows the connection mismatch.",
             "evidence_summary": "Runtime and source observations are available.",
-            "decision_mode": mode, "action": action, "ready_for_evaluation": ready,
+            "action": mode, "tool": tool_call["name"] if tool_call else None,
+            "arguments": tool_call["arguments"] if tool_call else None,
             "evidence_goal": "Confirm the configuration behavior." if not blocked else "No permitted evidence remains.",
             "hypothesis_id": hypotheses[0]["id"] if hypotheses else None}
 
 def final_report():
     items = [evidence(2, "/data/entries/0/message", "connection refused to port 9001"),
              evidence(3, "/data/lines/0/text", "configured_port = 9000")]
-    return {"status": "ROOT_CAUSE_IDENTIFIED", "symptom": "A request fails.", "reproduction_status": "CONFIRMED",
+    return {"status": "ROOT_CAUSE_SUPPORTED", "symptom": "A request fails.", "reproduction_status": "CONFIRMED",
             "root_cause": "Configured destination differs from the observed destination.",
             "root_cause_category": "configuration", "affected_subsystem": "connection setup", "evidence": items,
             "rejected_hypotheses": [], "confidence": "high", "recommended_next_action": "Review the verified configuration mismatch.",
@@ -76,7 +77,7 @@ def test_langgraph_has_explicit_nodes_and_conditional_routing(active):
 def test_bug_investigates_through_graph_and_finalizes_supported_root_cause(active, monkeypatch):
     configure_tools(monkeypatch)
     result = investigate_graph(active, task(active), GraphProvider(graph_replies(active)))
-    assert result["final"]["status"] == "ROOT_CAUSE_IDENTIFIED"
+    assert result["final"]["status"] == "ROOT_CAUSE_SUPPORTED"
     assert result["summary"]["orchestrator"] == "langgraph"
     assert result["summary"]["tools_used"] == ["run_reproduction", "read_logs", "read_file"]
     saved = load_state(active, result["summary"]["run_id"])
@@ -90,9 +91,9 @@ def test_provider_failure_routes_to_recovery_then_resume_without_reproduction(ac
         ModelFailure("provider_error", "Gemini request failed (503).", True),
         ModelFailure("provider_error", "Gemini request failed (503).", True),
     ], retries=1))
-    assert failed["final"]["status"] == "PROVIDER_FAILURE" and failed["summary"]["phase"] == "paused"
+    assert failed["final"]["status"] == "MODEL_PROVIDER_FAILURE" and failed["summary"]["phase"] == "paused"
     resumed = investigate_graph(active, None, GraphProvider(graph_replies(active)), resume_run_id=failed["summary"]["run_id"])
-    assert resumed["final"]["status"] == "ROOT_CAUSE_IDENTIFIED"
+    assert resumed["final"]["status"] == "ROOT_CAUSE_SUPPORTED"
     assert resumed["summary"]["tools_used"] == ["run_reproduction", "read_logs", "read_file"]
     assert resumed["summary"]["resume_count"] == 1
     assert load_state(active, resumed["summary"]["run_id"])["provider_errors"][0]["code"] == "provider_error"
@@ -100,7 +101,7 @@ def test_provider_failure_routes_to_recovery_then_resume_without_reproduction(ac
 def test_budget_routes_to_limitation_without_model_call(active, monkeypatch):
     configure_tools(monkeypatch)
     result = investigate_graph(active, task(active), GraphProvider([]), Budget(max_tool_calls=1))
-    assert result["final"]["status"] == "MAX_STEPS_REACHED"
+    assert result["final"]["status"] == "INSUFFICIENT_EVIDENCE"
     assert result["summary"]["tools_used"] == ["run_reproduction"] and result["summary"]["model_calls"] == 0
 
 def test_blocked_evaluation_routes_to_insufficient_evidence(active, monkeypatch):
@@ -113,7 +114,7 @@ def test_blocked_evaluation_routes_to_insufficient_evidence(active, monkeypatch)
     ]
     provider = GraphProvider(replies)
     result = investigate_graph(active, task(active), provider)
-    assert result["final"]["status"] == "PROVIDER_FAILURE"
+    assert result["final"]["status"] == "MODEL_PROVIDER_FAILURE"
     assert provider.requests[-1][0] != provider.requests[-2][0]
 
 
@@ -133,7 +134,7 @@ def test_insufficient_audit_returns_investigator_for_new_evidence_then_reaudits(
     ready_again = decision(None, [hypothesis("supported", [runtime_evidence, source_evidence])], reviewed_step=4, ready=True)
     result = investigate_graph(active, task(active), GraphProvider([first, ready, insufficient, gather, ready_again, evaluation_yes()]))
     saved = load_state(active, result["summary"]["run_id"])
-    assert result["final"]["status"] == "ROOT_CAUSE_IDENTIFIED"
+    assert result["final"]["status"] == "ROOT_CAUSE_SUPPORTED"
     assert saved["audit_cycles"] == 2
     assert saved["steps"][-1]["tool"] == "read_file"
     assert any(event["node"] == "investigate_missing_evidence" for event in saved["events"])
@@ -163,18 +164,18 @@ def test_legacy_null_final_resume_is_safe(active, monkeypatch):
     from traceroot.agents.state import atomic_json, run_directory
     atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
     resumed = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"])
-    assert resumed["final"]["status"] == "PROVIDER_FAILURE"
+    assert resumed["final"]["status"] == "MODEL_PROVIDER_FAILURE"
 
 
 def test_retry_invalid_reopens_only_invalid_finished_checkpoint(active, monkeypatch):
     configure_tools(monkeypatch)
     failed = investigate_graph(active, task(active), GraphProvider([ModelFailure("provider_error", "temporary", True)], retries=0))
     saved = load_state(active, failed["summary"]["run_id"])
-    saved.update({"phase": "finished", "final": {**failed["final"], "status": "TOOL_FAILURE"}, "limitation": "invalid_decisions", "graph_next": "finalize", "hypotheses": [hypothesis("supported", [evidence(1, "/data/http_observations/0/observed", "500"), evidence(2, "/data/entries/0/message", "connection refused to port 9001")]) ]})
+    saved.update({"phase": "finished", "final": {**failed["final"], "status": "MODEL_DECISION_FAILURE"}, "limitation": "invalid_decisions", "graph_next": "finalize", "hypotheses": [hypothesis("supported", [evidence(1, "/data/http_observations/0/observed", "500"), evidence(2, "/data/entries/0/message", "connection refused to port 9001")]) ]})
     from traceroot.agents.state import atomic_json, run_directory
     atomic_json(run_directory(active, saved["run_id"]) / "state.json", saved)
     reopened = investigate_graph(active, None, GraphProvider([ModelFailure("provider_error", "temporary", False)]), resume_run_id=saved["run_id"], retry_invalid=True)
-    assert reopened["final"]["status"] == "PROVIDER_FAILURE" and reopened["summary"]["tool_calls"] == 2
+    assert reopened["final"]["status"] == "MODEL_PROVIDER_FAILURE" and reopened["summary"]["tool_calls"] == 2
 
 
 def test_stale_tool_repository_is_repairable_decision_error(active, monkeypatch):

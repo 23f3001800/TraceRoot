@@ -48,6 +48,8 @@ class InvestigationState(TypedDict, total=False):
     resume_count: int
     elapsed_seconds: float
     usage: dict[str, int]
+    usage_by_role: dict[str, dict[str, int]]
+    latency_ms_by_role: dict[str, float]
     final: dict[str, Any] | None
     stopping_reason: str | None
     updated_at: str
@@ -107,7 +109,7 @@ class GraphRuntime:
         self.state["recovery_target"] = target
         self.state["limitation"] = exc.code
         self.state["graph_next"] = "recovery"
-        self.checkpoint("provider_recovery", "PROVIDER_FAILURE")
+        self.checkpoint("provider_recovery", "MODEL_PROVIDER_FAILURE")
 
     def call_model(self, system: str, messages: list[dict], schema: dict, target: str):
         if self.state["model_calls"] >= self.budget.max_model_calls or monotonic() >= self.deadline_at:
@@ -120,6 +122,7 @@ class GraphRuntime:
         self.state["pending_model"] = True
         self.checkpoint("model_request", "running")
         try:
+            call_started = monotonic()
             with deadline(min(self.budget.model_timeout, remaining)):
                 reply = self.provider.generate(system, messages, schema, min(self.budget.model_timeout, remaining))
             self.state["pending_model"] = False
@@ -127,8 +130,14 @@ class GraphRuntime:
             if failover:
                 self.state["provider_failures"].append({**failover, "retryable": True,
                     "after_step": len(self.state["steps"]), "target": target, "fallback_succeeded": True})
+            role = "auditor" if target == "evidence_auditor" else ("feedback_investigator" if self.state.get("audit_cycles", 0) else "investigator")
+            self.state.setdefault("usage_by_role", {}).setdefault(role, {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0})
+            self.state.setdefault("latency_ms_by_role", {}).setdefault(role, 0.0)
             for key in self.state["usage"]:
-                self.state["usage"][key] += reply.usage.get(key, 0)
+                amount = reply.usage.get(key, 0)
+                self.state["usage"][key] += amount
+                self.state["usage_by_role"][role][key] += amount
+            self.state["latency_ms_by_role"][role] += round((monotonic() - call_started) * 1000, 2)
             self.state["provider_retry_count"] = 0
             return reply.decision
         except DeadlineExpired:
@@ -185,7 +194,7 @@ def _request(runtime: GraphRuntime, instruction: str) -> list[dict]:
 
 def _auditor_final_report(state: dict, hypothesis: dict) -> dict:
     """Build the fixed report contract after the Auditor supports a cited hypothesis."""
-    final = {"status": "ROOT_CAUSE_IDENTIFIED", "symptom": state["initial"]["task"]["bug_report"],
+    final = {"status": "ROOT_CAUSE_SUPPORTED", "symptom": state["initial"]["task"]["bug_report"],
         "reproduction_status": reproduction_status(state["steps"]), "root_cause": hypothesis["claim"],
         "root_cause_category": "application", "affected_subsystem": state.get("current_subsystem") or "unknown",
         "evidence": hypothesis["evidence"], "rejected_hypotheses": [], "confidence": hypothesis["confidence"],
@@ -254,21 +263,21 @@ def build_graph(runtime: GraphRuntime):
             return state
         try:
             validate(decision, INVESTIGATION_DECISION_SCHEMA)
-            mode = decision["decision_mode"]
-            if mode == "TOOL_CALL" and (decision["action"] is None or decision["ready_for_evaluation"]):
-                raise ValueError("TOOL_CALL requires one action and ready_for_evaluation=false.")
-            if mode == "AUDIT" and (decision["action"] is not None or not decision["ready_for_evaluation"]):
-                raise ValueError("AUDIT requires no action and ready_for_evaluation=true.")
-            if mode == "BLOCKED" and (decision["action"] is not None or decision["ready_for_evaluation"]):
-                raise ValueError("BLOCKED requires no action and ready_for_evaluation=false.")
-            if mode != "BLOCKED" and not decision["evidence_goal"]:
-                raise ValueError("A tool or audit decision requires an evidence_goal.")
+            mode = decision["action"]
+            if mode == "TOOL_CALL" and (decision["tool"] is None or decision["arguments"] is None):
+                raise ValueError("TOOL_CALL requires tool and arguments.")
+            if mode == "FINAL" and (decision["tool"] is not None or decision["arguments"] is not None):
+                raise ValueError("FINAL requires no tool or arguments.")
+            if mode == "BLOCKED" and (decision["tool"] is not None or decision["arguments"] is not None):
+                raise ValueError("BLOCKED requires no tool or arguments.")
+            if not decision["evidence_goal"]:
+                raise ValueError("Every decision requires an evidence_goal.")
             if decision["reviewed_step"] != len(state["steps"]):
                 raise ValueError("reviewed_step must equal the latest tool step.")
             validate_hypotheses(decision["hypotheses"], state["hypotheses"], state["steps"])
-            if decision["action"] is not None:
-                arguments = decision["action"]["arguments"]
-                validate(arguments, TOOL_INPUTS[decision["action"]["name"]])
+            if mode == "TOOL_CALL":
+                arguments = decision["arguments"]
+                validate(arguments, TOOL_INPUTS[decision["tool"]])
                 expected_repository = state["initial"]["task"]["repository"]
                 supplied_repository = arguments.get("repository", arguments.get("repository_path"))
                 if supplied_repository is not None and supplied_repository != expected_repository:
@@ -277,7 +286,7 @@ def build_graph(runtime: GraphRuntime):
             state["invalid"] += 1
             state["consecutive_invalid"] += 1
             state["decision_repair_attempts"] += 1
-            state["transcript"].append({"role": "user", "text": json.dumps({"decision_validation": {"valid": False, "error": str(exc)[:300], "attempt": state["decision_repair_attempts"], "max_attempts": 2, "required": ["decision_mode", "action", "evidence_goal", "hypothesis_id", "stable hypotheses"]}})})
+            state["transcript"].append({"role": "user", "text": json.dumps({"decision_validation": {"valid": False, "error": str(exc)[:300], "attempt": state["decision_repair_attempts"], "max_attempts": 2, "required": ["action", "evidence_goal", "tool", "arguments", "hypothesis_id", "stable hypotheses"]}})})
             state["limitation"] = "invalid_decisions" if state["decision_repair_attempts"] >= 2 else None
             state["graph_next"] = "report_limitation" if state["limitation"] else "investigate"
             runtime.checkpoint("hypothesis_update", "rejected")
@@ -286,15 +295,15 @@ def build_graph(runtime: GraphRuntime):
         state["decision_repair_attempts"] = 0
         state["hypotheses"] = decision["hypotheses"]
         state["reviewed_step"] = decision["reviewed_step"]
-        state["planned_action"] = decision["action"]
+        state["planned_action"] = {"name": decision["tool"], "arguments": decision["arguments"]} if mode == "TOOL_CALL" else None
         state["transcript"].append({"role": "model", "text": json.dumps({
             "hypothesis_summary": decision["hypothesis_summary"], "evidence_summary": decision["evidence_summary"],
-            "action": decision["action"], "ready_for_evaluation": decision["ready_for_evaluation"]})})
-        if decision["decision_mode"] == "BLOCKED":
+            "action": mode, "tool": decision["tool"], "arguments": decision["arguments"]})})
+        if mode == "BLOCKED":
             state["limitation"] = "insufficient_evidence"
             state["graph_next"] = "report_limitation"
         else:
-            state["graph_next"] = "evidence_auditor" if decision["decision_mode"] == "AUDIT" else "execute_tool"
+            state["graph_next"] = "evidence_auditor" if mode == "FINAL" else "execute_tool"
         runtime.checkpoint("hypothesis_update")
         return state
 
@@ -383,20 +392,25 @@ def build_graph(runtime: GraphRuntime):
             state["limitation"] = latest["code"]
             state["graph_next"] = "report_limitation"
             state["phase"] = "paused"
-            runtime.checkpoint("provider_recovery", "PROVIDER_FAILURE")
+            runtime.checkpoint("provider_recovery", "MODEL_PROVIDER_FAILURE")
         return state
 
     def report_limitation(state: InvestigationState):
         runtime.state = state
         reason = state.get("limitation") or "insufficient_evidence"
-        if reason in {"reproduction_unavailable"} or reproduction_status(state["steps"]) in {"UNAVAILABLE", "NOT_REPRODUCED"}:
+        if reproduction_status(state["steps"]) == "UNAVAILABLE":
+            status = "REPRODUCTION_UNAVAILABLE"
+        elif reproduction_status(state["steps"]) == "NOT_REPRODUCED":
             status = "REPRODUCTION_FAILED"
-        elif reason in {"time_budget", "tool_call_budget", "model_call_budget"}:
-            status = "MAX_STEPS_REACHED"
         elif reason in {"provider_error", "model_timeout"}:
-            status = "PROVIDER_FAILURE"
-        elif reason in {"tool_failure", "invalid_decisions", "missing_tool_action", "duplicate_reproduction"}:
-            status = "TOOL_FAILURE"
+            status = "MODEL_PROVIDER_FAILURE"
+        elif reason == "invalid_decisions":
+            status = "MODEL_DECISION_FAILURE"
+        elif reason == "tool_failure":
+            last_error = (state["tool_failures"][-1].get("error") or {}).get("code") if state["tool_failures"] else ""
+            status = "TOOL_PERMISSION_FAILURE" if last_error in {"path_denied", "benchmark_denied", "permission_denied"} else "TOOL_EXECUTION_FAILURE"
+        elif reason == "contradicted":
+            status = "CONTRADICTED"
         else:
             status = "INSUFFICIENT_EVIDENCE"
         state["final"] = fallback(state["initial"]["task"], state["steps"], status, reason)
@@ -409,14 +423,14 @@ def build_graph(runtime: GraphRuntime):
         hypothesis = next(item for item in state["hypotheses"] if item["status"] == "supported")
         state["final"] = _auditor_final_report(state, hypothesis)
         state["graph_next"] = "finalize"
-        runtime.checkpoint("root_cause_report", "ROOT_CAUSE_IDENTIFIED")
+        runtime.checkpoint("root_cause_report", "ROOT_CAUSE_SUPPORTED")
         return state
 
     def finalize(state: InvestigationState):
         runtime.state = state
         validate(state["final"], FINAL_SCHEMA)
         validate_final(state["final"], state["steps"])
-        state["phase"] = "paused" if state["final"]["status"] == "PROVIDER_FAILURE" else "finished"
+        state["phase"] = "paused" if state["final"]["status"] == "MODEL_PROVIDER_FAILURE" else "finished"
         state["stopping_reason"] = state.get("limitation") or "graph_finished"
         state["graph_next"] = "finalize"
         runtime.checkpoint("finalize", state["final"]["status"])
@@ -454,6 +468,8 @@ def _initial_state(context, task, provider, budget):
         "pending_action": None, "pending_model": False, "transcript": [], "events": [], "provider_failures": [], "tool_failures": [],
         "turns": 0, "decisions": 0, "invalid": 0, "consecutive_invalid": 0, "decision_repair_attempts": 0, "resume_count": 0,
         "elapsed_seconds": 0.0, "usage": {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0},
+        "usage_by_role": {role: {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0} for role in ("investigator", "auditor", "feedback_investigator")},
+        "latency_ms_by_role": {role: 0.0 for role in ("investigator", "auditor", "feedback_investigator")},
         "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None, "audits": [], "audit_cycles": 0,
         "incident": {}, "reproduction": None, "observations": [], "evidence": [], "tool_history": [], "provider_errors": [],
         "current_subsystem": None, "status": "RUNNING", "step_count": 0, "model_calls": 0,
@@ -470,7 +486,7 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
                 raise ValueError("Resume cannot change the original task.")
             task = initial["task"]
             budget = Budget(**initial["budget"])
-            can_retry_invalid = retry_invalid and (state.get("final") or {}).get("status") == "TOOL_FAILURE" and state.get("limitation") == "invalid_decisions"
+            can_retry_invalid = retry_invalid and (state.get("final") or {}).get("status") == "MODEL_DECISION_FAILURE" and state.get("limitation") == "invalid_decisions"
             if state["phase"] == "finished" and not can_retry_invalid:
                 return _result(context, provider, budget, state, run_directory(context, state["run_id"]))
             if can_retry_invalid:
@@ -483,7 +499,7 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
             state["resume_count"] += 1
             state["phase"] = "running"
             previous_provider_failure = bool(state.get("provider_failures"))
-            if ((state.get("final") or {}).get("status") == "PROVIDER_FAILURE" or
+            if ((state.get("final") or {}).get("status") == "MODEL_PROVIDER_FAILURE" or
                     (state.get("final") is None and state.get("graph_next") == "finalize" and previous_provider_failure)) and                     (state.get("limitation") in {"provider_error", "model_timeout"} or previous_provider_failure):
                 state["final"] = None
                 state["provider_retry_count"] = 0
@@ -512,12 +528,12 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
 
 def _result(context, provider, budget, state, directory):
     sync_investigation_view(state)
-    final = state["final"] or fallback(state["initial"]["task"], state["steps"], "TOOL_FAILURE", "graph_incomplete")
+    final = state["final"] or fallback(state["initial"]["task"], state["steps"], "TOOL_EXECUTION_FAILURE", "graph_incomplete")
     summary = {"run_id": state["run_id"], "model": provider.config.model_name, "orchestrator": "langgraph",
         "status": final["status"], "stopping_reason": state.get("stopping_reason"), "tool_calls": len(state["steps"]),
         "model_calls": state["model_calls"], "tools_used": [step["tool"] for step in state["steps"]],
         "incorrect_calls": sum(step["result"]["status"] != "ok" for step in state["steps"]), "invalid_decisions": state["invalid"],
-        "duration_ms": round(state["elapsed_seconds"] * 1000, 2), "usage": state["usage"], "budget": asdict(budget),
+        "duration_ms": round(state["elapsed_seconds"] * 1000, 2), "usage": state["usage"], "usage_by_role": state.get("usage_by_role", {}), "latency_ms_by_role": state.get("latency_ms_by_role", {}), "budget": asdict(budget),
         "snapshot_id": context.repository.snapshot_id, "artifacts": str(directory), "phase": state["phase"],
         "resumable": state["phase"] == "paused", "resume_count": state["resume_count"],
         "provider_failures": len(state["provider_failures"]), "tool_failures": len(state["tool_failures"]),

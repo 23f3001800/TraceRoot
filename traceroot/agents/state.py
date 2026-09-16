@@ -28,7 +28,7 @@ STATE_SCHEMA = obj({
     "turns": integer(0, 60), "decisions": integer(0, 30), "invalid": integer(0, 30),
     "consecutive_invalid": integer(0, 3), "decision_repair_attempts": integer(0, 2), "resume_count": integer(0, 60),
     "elapsed_seconds": {"type": "number", "minimum": 0},
-    "usage": {"type": "object"}, "final": nullable(FINAL_SCHEMA),
+    "usage": {"type": "object"}, "usage_by_role": {"type": "object"}, "latency_ms_by_role": {"type": "object"}, "final": nullable(FINAL_SCHEMA),
     "stopping_reason": nullable(string(100)), "updated_at": string(100),
 })
 
@@ -88,6 +88,8 @@ def migrate_state(state):
     state.setdefault("audits", [])
     state.setdefault("audit_cycles", len(state["audits"]))
     state.setdefault("decision_repair_attempts", 0)
+    state.setdefault("usage_by_role", {role: {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0} for role in ("investigator", "auditor", "feedback_investigator")})
+    state.setdefault("latency_ms_by_role", {role: 0.0 for role in ("investigator", "auditor", "feedback_investigator")})
     if state.get("graph_next") == "evaluate_evidence":
         state["graph_next"] = "evidence_auditor"
     if state.get("version") == 1:

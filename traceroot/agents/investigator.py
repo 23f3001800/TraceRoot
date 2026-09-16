@@ -122,7 +122,7 @@ def validate_final(report, steps):
             i not in by_step or by_step[i]["result"]["status"] != "ok" for i in hypothesis["evidence_steps"]
         ):
             raise ValueError("Rejected hypotheses need observed evidence.")
-    if report["status"] == "ROOT_CAUSE_IDENTIFIED":
+    if report["status"] in {"ROOT_CAUSE_IDENTIFIED", "ROOT_CAUSE_SUPPORTED"}:
         if not report["root_cause"] or len(groups) < 2 or not runtime_or_reproduction or not confirming_subsystem:
             raise ValueError("Root cause needs runtime or reproduction evidence plus confirming subsystem evidence.")
         if report["reproduction_status"] != "CONFIRMED" and not report["limitations"]:

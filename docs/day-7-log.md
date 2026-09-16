@@ -337,3 +337,12 @@
 - Fresh BUG-006 reproduction was unavailable in the disposable target session.
 - It made one reproduction call and no model or Auditor calls.
 - BUG-006 is marked NOT EVALUATED for the Auditor feedback-loop experiment.
+
+
+## 2026-09-16 - Explicit investigation failure taxonomy
+
+- Graph outcomes now separate reproduction, model-provider, model-decision, tool-execution, and tool-permission failures.
+- Supported reports now use ROOT_CAUSE_SUPPORTED.
+
+- Day 11 control-plane hardening: strict investigator decisions and explicit failure taxonomy.
+- Added separate investigator/auditor/feedback token and latency measurements. Focused verification: 19 passed.

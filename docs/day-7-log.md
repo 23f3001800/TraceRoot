@@ -330,3 +330,10 @@
 
 - Score: 11 of 11 focused LangGraph tests passed.
 - Verified stale repository arguments are rejected before tool dispatch.
+
+
+## 2026-09-16 - Fresh BUG-006 feedback-loop attempt
+
+- Fresh BUG-006 reproduction was unavailable in the disposable target session.
+- It made one reproduction call and no model or Auditor calls.
+- BUG-006 is marked NOT EVALUATED for the Auditor feedback-loop experiment.

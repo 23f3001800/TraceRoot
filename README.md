@@ -109,9 +109,9 @@ observed scores only; never replace a failed or incomplete run with an estimate.
 | BUG-002 | ROOT_CAUSE_IDENTIFIED | 1/1 | 5 | - | Not run |
 | BUG-003 | ROOT_CAUSE_IDENTIFIED | 1/1 | 8 | 13 | SUPPORTED |
 | BUG-004 | ROOT_CAUSE_IDENTIFIED | 1/1 | 3 | - | Not run |
-| BUG-005 | PROVIDER_FAILURE | 0/1 | 2 | - | Not run |
-| BUG-006 | INSUFFICIENT evidence | 0/1 | 5 | 19 | Correctly rejected weak RCA |
-| **Total** | **4 of 6 root causes** | **67%** |  |  | **1 of 1 weak RCA rejected** |
+| BUG-005 | INCOMPLETE | 0/1 | 3 | 14 | INSUFFICIENT |
+| BUG-006 | NOT EVALUATED | N/A | 1 | 0 | Not run |
+| **Coverage** | **4 of 5 evaluated root causes** | **80%** |  |  | **1 of 1 weak RCA rejected** |
 
 BUG-006's Azure Evidence Auditor added no tools, one model call, 3,123 tokens,
 and 22.9 seconds. It required payment-handler, persistence, and correlated log

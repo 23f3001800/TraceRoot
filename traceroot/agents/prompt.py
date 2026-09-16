@@ -37,7 +37,10 @@ reproduction already in the checkpoint. Provider failures are infrastructure eve
 not evidence about the application. Stop with REPRODUCTION_FAILED if reproduction
 is unavailable; use INSUFFICIENT_EVIDENCE if no useful evidence path remains.
 
-Return one structured decision: exactly one action OR one final_report.
+Return one structured decision with decision_mode: TOOL_CALL, AUDIT, or BLOCKED.
+TOOL_CALL requires one action, an evidence_goal, and the hypothesis_id it tests.
+AUDIT requires no action and sets ready_for_evaluation=true. BLOCKED requires no action,
+sets ready_for_evaluation=false, and states the unavailable evidence in evidence_goal.
 Use brief hypothesis_summary and evidence_summary fields, each at most 300 characters.
 Do not output private internal reasoning, thought transcripts, or long reasoning narratives.
 Available tool-step numbers are supplied in the transcript. A final report is not

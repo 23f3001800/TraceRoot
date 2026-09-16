@@ -44,6 +44,7 @@ class InvestigationState(TypedDict, total=False):
     decisions: int
     invalid: int
     consecutive_invalid: int
+    decision_repair_attempts: int
     resume_count: int
     elapsed_seconds: float
     usage: dict[str, int]
@@ -253,8 +254,15 @@ def build_graph(runtime: GraphRuntime):
             return state
         try:
             validate(decision, INVESTIGATION_DECISION_SCHEMA)
-            if (decision["action"] is None) == (decision["ready_for_evaluation"] is False):
-                raise ValueError("Choose one action or mark the evidence ready for evaluation.")
+            mode = decision["decision_mode"]
+            if mode == "TOOL_CALL" and (decision["action"] is None or decision["ready_for_evaluation"]):
+                raise ValueError("TOOL_CALL requires one action and ready_for_evaluation=false.")
+            if mode == "AUDIT" and (decision["action"] is not None or not decision["ready_for_evaluation"]):
+                raise ValueError("AUDIT requires no action and ready_for_evaluation=true.")
+            if mode == "BLOCKED" and (decision["action"] is not None or decision["ready_for_evaluation"]):
+                raise ValueError("BLOCKED requires no action and ready_for_evaluation=false.")
+            if mode != "BLOCKED" and not decision["evidence_goal"]:
+                raise ValueError("A tool or audit decision requires an evidence_goal.")
             if decision["reviewed_step"] != len(state["steps"]):
                 raise ValueError("reviewed_step must equal the latest tool step.")
             validate_hypotheses(decision["hypotheses"], state["hypotheses"], state["steps"])
@@ -263,19 +271,25 @@ def build_graph(runtime: GraphRuntime):
         except ValueError as exc:
             state["invalid"] += 1
             state["consecutive_invalid"] += 1
-            state["transcript"].append({"role": "user", "text": json.dumps({"decision_error": str(exc)[:300]})})
-            state["limitation"] = "invalid_decisions" if state["consecutive_invalid"] >= 3 else None
+            state["decision_repair_attempts"] += 1
+            state["transcript"].append({"role": "user", "text": json.dumps({"decision_validation": {"valid": False, "error": str(exc)[:300], "attempt": state["decision_repair_attempts"], "max_attempts": 2, "required": ["decision_mode", "action", "evidence_goal", "hypothesis_id", "stable hypotheses"]}})})
+            state["limitation"] = "invalid_decisions" if state["decision_repair_attempts"] >= 2 else None
             state["graph_next"] = "report_limitation" if state["limitation"] else "investigate"
             runtime.checkpoint("hypothesis_update", "rejected")
             return state
         state["consecutive_invalid"] = 0
+        state["decision_repair_attempts"] = 0
         state["hypotheses"] = decision["hypotheses"]
         state["reviewed_step"] = decision["reviewed_step"]
         state["planned_action"] = decision["action"]
         state["transcript"].append({"role": "model", "text": json.dumps({
             "hypothesis_summary": decision["hypothesis_summary"], "evidence_summary": decision["evidence_summary"],
             "action": decision["action"], "ready_for_evaluation": decision["ready_for_evaluation"]})})
-        state["graph_next"] = "evidence_auditor" if decision["ready_for_evaluation"] else "execute_tool"
+        if decision["decision_mode"] == "BLOCKED":
+            state["limitation"] = "insufficient_evidence"
+            state["graph_next"] = "report_limitation"
+        else:
+            state["graph_next"] = "evidence_auditor" if decision["decision_mode"] == "AUDIT" else "execute_tool"
         runtime.checkpoint("hypothesis_update")
         return state
 
@@ -433,7 +447,7 @@ def _initial_state(context, task, provider, budget):
                     "prompt_contract_sha256": fingerprint, "snapshot_id": context.repository.snapshot_id},
         "phase": "running", "graph_next": "reproduce", "steps": [], "hypotheses": [], "reviewed_step": 0,
         "pending_action": None, "pending_model": False, "transcript": [], "events": [], "provider_failures": [], "tool_failures": [],
-        "turns": 0, "decisions": 0, "invalid": 0, "consecutive_invalid": 0, "resume_count": 0,
+        "turns": 0, "decisions": 0, "invalid": 0, "consecutive_invalid": 0, "decision_repair_attempts": 0, "resume_count": 0,
         "elapsed_seconds": 0.0, "usage": {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0},
         "final": None, "stopping_reason": None, "updated_at": utc_now(), "provider_retry_count": 0, "evaluation": None, "audits": [], "audit_cycles": 0,
         "incident": {}, "reproduction": None, "observations": [], "evidence": [], "tool_history": [], "provider_errors": [],
@@ -458,6 +472,7 @@ def investigate_graph(context, task, provider, budget=Budget(), progress=None, *
                 state["final"] = None
                 state["invalid"] = 0
                 state["consecutive_invalid"] = 0
+                state["decision_repair_attempts"] = 0
                 state["limitation"] = None
                 state["graph_next"] = "evidence_auditor"
             state["resume_count"] += 1

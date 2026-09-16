@@ -23,11 +23,14 @@ def hypothesis(status="supported", evidence_items=None):
             "status": status, "confidence": "high" if status == "supported" else "low",
             "evidence": evidence_items or [], "missing_evidence": [] if status != "proposed" else ["Runtime evidence."]}
 
-def decision(action, hypotheses, reviewed_step=2, ready=False):
+def decision(action, hypotheses, reviewed_step=2, ready=False, blocked=False):
+    mode = "BLOCKED" if blocked else ("AUDIT" if ready else "TOOL_CALL")
     return {"reviewed_step": reviewed_step, "hypotheses": hypotheses,
             "hypothesis_summary": "Evidence narrows the connection mismatch.",
             "evidence_summary": "Runtime and source observations are available.",
-            "action": action, "ready_for_evaluation": ready}
+            "decision_mode": mode, "action": action, "ready_for_evaluation": ready,
+            "evidence_goal": "Confirm the configuration behavior." if not blocked else "No permitted evidence remains.",
+            "hypothesis_id": hypotheses[0]["id"] if hypotheses else None}
 
 def final_report():
     items = [evidence(2, "/data/entries/0/message", "connection refused to port 9001"),

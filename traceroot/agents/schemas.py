@@ -156,7 +156,9 @@ DECISION_SCHEMA = obj({
 INVESTIGATION_DECISION_SCHEMA = obj({
     "reviewed_step": integer(0, 15), "hypotheses": array(HYPOTHESIS, 8),
     "hypothesis_summary": string(300), "evidence_summary": string(300),
+    "decision_mode": {"type": "string", "enum": ["TOOL_CALL", "AUDIT", "BLOCKED"]},
     "action": nullable(ACTION_SCHEMA), "ready_for_evaluation": {"type": "boolean"},
+    "evidence_goal": string(400), "hypothesis_id": nullable({"type": "string", "pattern": "^H[1-9][0-9]?$"}),
 })
 AUDIT_SCHEMA = obj({
     "verdict": {"type": "string", "enum": ["SUPPORTED", "INSUFFICIENT", "CONTRADICTED"]},

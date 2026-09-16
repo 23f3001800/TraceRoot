@@ -308,3 +308,14 @@
 - BUG-003: one additional read-only tool produced implementation evidence; Auditor returned SUPPORTED and root cause was identified.
 - BUG-005: Auditor returned INSUFFICIENT with specific database and pool evidence needs; three invalid Investigator decisions prevented tool selection.
 - Score updated to 4 of 6 root causes, or 67 percent.
+
+
+## 2026-09-16 - Investigator decision validation
+
+- Added explicit TOOL_CALL, AUDIT, and BLOCKED modes with evidence goals and target hypothesis IDs.
+- Invalid decisions now receive a machine-readable repair error and only two repair attempts.
+
+## 2026-09-16 - Decision validation verification
+
+- Score: 18 of 18 graph and provider tests passed.
+- Covered explicit decision modes and bounded structured repair handling.

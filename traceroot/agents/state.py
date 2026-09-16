@@ -26,7 +26,7 @@ STATE_SCHEMA = obj({
     "provider_failures": array({"type": "object"}, 60),
     "tool_failures": array({"type": "object"}, 15),
     "turns": integer(0, 60), "decisions": integer(0, 30), "invalid": integer(0, 30),
-    "consecutive_invalid": integer(0, 3), "resume_count": integer(0, 60),
+    "consecutive_invalid": integer(0, 3), "decision_repair_attempts": integer(0, 2), "resume_count": integer(0, 60),
     "elapsed_seconds": {"type": "number", "minimum": 0},
     "usage": {"type": "object"}, "final": nullable(FINAL_SCHEMA),
     "stopping_reason": nullable(string(100)), "updated_at": string(100),
@@ -87,6 +87,7 @@ def sync_investigation_view(state):
 def migrate_state(state):
     state.setdefault("audits", [])
     state.setdefault("audit_cycles", len(state["audits"]))
+    state.setdefault("decision_repair_attempts", 0)
     if state.get("graph_next") == "evaluate_evidence":
         state["graph_next"] = "evidence_auditor"
     if state.get("version") == 1:

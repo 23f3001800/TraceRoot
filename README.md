@@ -147,3 +147,5 @@ Investigation can use an explicitly configured LocalRunner when Docker is unavai
 - TargetRunner reproduction regression tests: **17 passed**.
 
 - BUG-006 deterministic Docker reproduction: **reproduced** (public test expected paid, observed pending; 1 failed, 0 errors).
+
+- Code search accepts an empty scope as the approved public repository root. Regression test added.

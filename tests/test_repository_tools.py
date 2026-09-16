@@ -73,3 +73,8 @@ def test_hardlink_and_size_denied(tmp_path):
     large.write_bytes(b"x" * 131073)
     with pytest.raises(ToolFailure):
         safe_bytes(tmp_path, "app/large.py")
+
+
+def test_empty_scope_means_public_repository_root(context):
+    result = search_code(context, context.repository.source, "def", path_scope="")
+    assert result.status == "ok"

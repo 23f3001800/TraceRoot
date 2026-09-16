@@ -354,3 +354,5 @@
 - TargetRunner compatibility correction verified: 17 reproduction/execution tests passed. Docker remains default; LocalRunner is opt-in and read-only.
 
 - BUG-006 deterministic Docker reproduction passed the benchmark gate: the selected public regression test observed persisted status pending instead of paid.
+
+- BUG-006 live Investigator sent an empty search scope. Empty scope now means public repository root; this fixes a tool-contract usability defect.

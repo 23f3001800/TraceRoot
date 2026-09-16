@@ -9,7 +9,7 @@ def search_code(context, repository: str, query: str, path_scope: str = ".",
     if not isinstance(query, str) or not 1 <= len(query) <= 200:
         raise ToolFailure("invalid_query", "Use a literal query of 1 to 200 characters.")
     bounded_int(result_limit, 1, 100, "result_limit")
-    scope = relative_path(path_scope, allow_dot=True)
+    scope = "." if path_scope == "" else relative_path(path_scope, allow_dot=True)
     paths = [p for p in context.repository.manifest
              if scope == "." or p == scope or p.startswith(scope + "/")]
     if not paths:

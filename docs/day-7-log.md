@@ -366,3 +366,9 @@
 - Added Docker-only sandbox executor and verifier boundaries. Executor rejects LocalRunner, missing approval, foreign repositories, and malformed patches; patch application remains disabled. Tests: 2 passed.
 
 - Hardened executor approvals to exact patch hashes plus repository/session/timestamp status. Added deterministic patch policy; 5 focused negative tests passed. Patch application still disabled pending Docker git apply check and verifier verdicts.
+
+- Rewrote README as a clean product guide and clarified deterministic verifier purpose. Full application test run follows.
+
+- Full suite exposed legacy investigator state missing fields introduced by per-role measurements. Initialized all current state fields before rerunning.
+
+- Full TraceRoot application suite after legacy-state compatibility fix: 122 passed, 4 skipped in 16.93 seconds.

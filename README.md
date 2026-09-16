@@ -1,165 +1,50 @@
 # TraceRoot
-Multi-Agent Incident Investigation and Recovery for AI Applications
 
+TraceRoot investigates software incidents, records evidence, and produces a root-cause report. It runs against a separate target repository and preserves the target Git history.
 
-Given a failure in a running software system, TraceRoot autonomously reproduces the problem, investigates across source code, runtime state, logs, databases, tests and deployment history, tests competing hypotheses, identifies an evidence-backed root cause, and performs a bounded remediation only after verification and human approval where required.
-## Repositories
+## What it does
 
-TraceRoot lives here. Its standalone commerce target is a sibling repository at
-../target-app, with an independent .git directory and the app's extracted commit
-history. The original TraceRoot commits remain intact.
+1. Reproduces the reported failure.
+2. Collects bounded runtime evidence.
+3. Uses one read-only Investigator to select evidence tools.
+4. Uses an independent Evidence Auditor to check root-cause claims.
+5. Creates a proposal-only remediation plan only after ROOT_CAUSE_SUPPORTED.
 
-See [tool design](docs/tool-design.md) and [input contract](docs/input-contract.md)
-for the initial read-only investigation interface. Six structured investigation tools are implemented. One Gemini investigator now tracks evidence-linked hypotheses and resumes from durable checkpoints. Remediation is not implemented. Provide a sanitized target checkout to investigations; never
-expose evaluator ground truth or the main repository's historical Git objects.
+The current agents are Investigator, Evidence Auditor, and Remediation Planner. The planner has no tools or write permissions.
 
-## Tool layer
+## Safety boundaries
 
-Start with [your next steps](docs/your-next-steps.md) and [tool contracts](docs/tool-api.md).
+- Target source, logs, database inspection, configuration, Git, and tests are read-only during investigation.
+- Benchmark ground-truth paths are blocked.
+- LocalRunner is investigation-only.
+- DockerRunner is required for future execution.
+- Exact-diff human approvals bind patch hash, investigation, repository, sandbox session, expiry, and consumption state.
+- Patch application is disabled. The executor rejects unsafe or unapproved patches.
 
-The [manual investigation](docs/manual-investigation-bug-001.md) records actual calls and evidence. Keep it hidden during future evaluations.
+## Status
 
-TraceRoot runs untrusted target tests inside disposable containers. Source access and PostgreSQL inspection are read-only.
+BUG-003 reached ROOT_CAUSE_SUPPORTED with an Auditor verdict of SUPPORTED.
 
-## Persistent investigation
+BUG-006 has a deterministic Docker reproduction: the public regression test expected paid and observed pending. Its live graph run later ended as MODEL_DECISION_FAILURE after invalid Azure output, before the Auditor ran.
 
-Follow [run and resume](docs/run-single-investigator.md) for the operator commands.
-See [state and recovery](docs/investigation-state.md) for checkpoint contracts,
-cumulative budgets, hypothesis tracking and provider-failure handling.
+BUG-005 remains incomplete. Its Auditor identified missing runtime pool, stack-trace, and request-correlation evidence.
 
+## Run
 
+Prepare an isolated target environment:
 
-###  Architecture
+    python -m traceroot prepare --repository TARGET_REPOSITORY --docker "$(command -v docker)"
 
-                         USER / INCIDENT
-                               │
-                               ▼
-                    ┌────────────────────┐
-                    │ Incident Controller │
-                    │   deterministic     │
-                    └─────────┬──────────┘
-                              │
-                              ▼
-                        Reproduction
-                        deterministic
-                              │
-                              ▼
-                     Runtime Observation
-                       logs / traces
-                              │
-                              ▼
-                    ┌─────────────────┐
-                    │ Triage Agent    │
-                    │                 │
-                    │ What subsystem? │
-                    │ What evidence?  │
-                    └────────┬────────┘
-                             │
-                ┌────────────┼─────────────┐
-                ▼            ▼             ▼
-        Code Investigator Runtime      Data/DB
-            Agent        Investigator Investigator
-                │            │             │
-          Git / files    logs/traces     schema/SQL
-          tests/code     processes/API    persisted state
-                │            │             │
-                └────────────┼─────────────┘
-                             ▼
-                    Shared Evidence State
-                             │
-                             ▼
-                    ┌───────────────────┐
-                    │ Evidence Critic   │
-                    │                   │
-                    │ Is root cause     │
-                    │ actually proven?  │
-                    └─────────┬─────────┘
-                              │
-                   ┌──────────┴──────────┐
-                   │                     │
-             insufficient             supported
-                   │                     │
-                   ▼                     ▼
-             investigate again      Root Cause Report
-                                         │
-                                         ▼
-                                 Remediation Planner
-                                         │
-                                         ▼
-                                  Human Approval
-                                         │
-                                         ▼
-                                   Action Executor
-                                         │
-                                         ▼
-                                      Verifier
-                                   /           \
-                                FAIL           PASS
-                                 │               │
-                              rollback         resolved
+Run an investigation using a sanitized target checkout and a local provider configuration:
 
-## Evaluation scorecard
+    python -m traceroot investigate --session SESSION --task-file task.json --env-file .env
 
-Update this section after every test or live benchmark run, before its commit. Record
-observed scores only; never replace a failed or incomplete run with an estimate.
+See [manual runs](docs/day-6-manual-runs.md) and [state and recovery](docs/investigation-state.md).
 
-| Benchmark | Latest result | Root-cause score | Tool calls | Model calls | Auditor result |
-| --- | --- | ---: | ---: | ---: | --- |
-| BUG-001 | ROOT_CAUSE_IDENTIFIED | 1/1 | 4 | - | Not run |
-| BUG-002 | ROOT_CAUSE_IDENTIFIED | 1/1 | 5 | - | Not run |
-| BUG-003 | ROOT_CAUSE_IDENTIFIED | 1/1 | 8 | 13 | SUPPORTED |
-| BUG-004 | ROOT_CAUSE_IDENTIFIED | 1/1 | 3 | - | Not run |
-| BUG-005 | INCOMPLETE | 0/1 | 3 | 14 | INSUFFICIENT |
-| BUG-006 | NOT EVALUATED | N/A | 1 | 0 | Not run |
-| **Coverage** | **4 of 5 evaluated root causes** | **80%** |  |  | **1 of 1 weak RCA rejected** |
+## Verification
 
-BUG-006's Azure Evidence Auditor added no tools, one model call, 3,123 tokens,
-and 22.9 seconds. It required payment-handler, persistence, and correlated log
-evidence before accepting a root cause.
+The verifier must be deterministic because the planner must not judge its own proposal. When enabled, it returns FIX_VERIFIED only if the original reproduction passes and the regression suite passes. Other outcomes distinguish persistent reproduction failure, regressions, and execution failure.
 
-BUG-003 completed with Auditor support. BUG-005 reached Auditor feedback but stopped on invalid Investigator decisions; its score remains unchanged. See `docs/day-10-live-feedback-evaluation.md`.
+Implementation logs and benchmark results are in [docs](docs/).
 
-### Score update rule
-
-Every test, benchmark, resume, or auditor run must update this scorecard and the
-corresponding dated entry in `docs/day-7-log.md` before committing. Include status,
-root-cause score, tool calls, model calls, tokens when available, latency when
-available, and the auditor verdict when one ran.
-
-Latest implementation verification: **18/18 tests passed** on 2026-09-15 for the
-Auditor feedback loop, Azure provider, and OpenRouter provider.
-Latest score update: **18/18** after explicit Investigator decision validation and bounded repair.
-Focused validation: **11/11 LangGraph tests passed** after canonical repository validation.
-
-
-### Latest control-plane verification
-
-- Strict Investigator decisions: TOOL_CALL, FINAL, or BLOCKED; two invalid attempts end as MODEL_DECISION_FAILURE.
-- Explicit result taxonomy separates reproduction, provider, decision, execution, permission, evidence, contradiction, and supported RCA.
-- Separate investigator, auditor, and feedback-investigator token and latency measurements.
-- Focused LangGraph/provider tests: **19 passed**.
-
-- 2026-09-16 BUG-006 re-run: setup stopped as REPRODUCTION_UNAVAILABLE because Docker Desktop WSL integration is disabled; no agent calls were made.
-
-### Target execution boundary
-
-Investigation can use an explicitly configured LocalRunner when Docker is unavailable. DockerRunner remains default. Any future remediation must require DockerRunner; LocalRunner denies reset and is never an execution backend. TargetRunner exposes run_reproduction, run_tests, get_logs, and reset_target.
-- TargetRunner reproduction regression tests: **17 passed**.
-
-- BUG-006 deterministic Docker reproduction: **reproduced** (public test expected paid, observed pending; 1 failed, 0 errors).
-
-- Code search accepts an empty scope as the approved public repository root. Regression test added.
-
-- Read-file schema now matches its 200-line enforcement limit; invalid ranges are rejected before tool dispatch.
-
-- BUG-006 live graph run reached nine tools without rerunning reproduction, then ended MODEL_DECISION_FAILURE after Azure invalid JSON; Auditor was not reached.
-
-### Remediation Planner
-
-A proposal-only Remediation Planner accepts only ROOT_CAUSE_SUPPORTED investigations. It returns proposed changes, validation, risk, and mandatory human approval. It has no tools or write permissions. Planner tests: 2 passed.
-
-### Sandbox execution boundary
-
-Future execution is Docker-only. The executor requires a human approval ID, the registered disposable target, and one bounded unified diff. Patch application remains disabled. Verifier is Docker-only. Boundary tests: 2 passed.
-
-- Executor approvals now bind the exact patch SHA-256, investigation, repository session, expiry, and consumption state. Patch policy rejects protected paths, traversal, binaries, symlinks, deletions, and oversized diffs. Focused tests: 5 passed.
+Latest application verification: 122 passed, 4 skipped.

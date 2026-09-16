@@ -38,7 +38,7 @@ TOOL_INPUTS = {
     }, ["repository", "query"]),
     "read_file": obj({
         "repository": REPOSITORY, "file_path": string(300),
-        "start_line": integer(1, 1000000), "end_line": integer(1, 1000199),
+        "start_line": integer(1, 1000000), "end_line": integer(1, 200),
     }, ["repository", "file_path"]),
     "inspect_database": obj({
         "operation": {"type": "string", "enum": ["list_tables", "describe_table", "list_constraints", "sample_rows"]},

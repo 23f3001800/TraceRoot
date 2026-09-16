@@ -149,3 +149,5 @@ Investigation can use an explicitly configured LocalRunner when Docker is unavai
 - BUG-006 deterministic Docker reproduction: **reproduced** (public test expected paid, observed pending; 1 failed, 0 errors).
 
 - Code search accepts an empty scope as the approved public repository root. Regression test added.
+
+- Read-file schema now matches its 200-line enforcement limit; invalid ranges are rejected before tool dispatch.

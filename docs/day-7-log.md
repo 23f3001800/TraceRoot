@@ -356,3 +356,5 @@
 - BUG-006 deterministic Docker reproduction passed the benchmark gate: the selected public regression test observed persisted status pending instead of paid.
 
 - BUG-006 live Investigator sent an empty search scope. Empty scope now means public repository root; this fixes a tool-contract usability defect.
+
+- BUG-006 second live run exposed a contract mismatch: read_file enforced 200 lines while its model schema allowed 1,000,199. Tightened the model schema so overlong reads become MODEL_DECISION_FAILURE before tool dispatch.

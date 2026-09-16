@@ -161,3 +161,5 @@ A proposal-only Remediation Planner accepts only ROOT_CAUSE_SUPPORTED investigat
 ### Sandbox execution boundary
 
 Future execution is Docker-only. The executor requires a human approval ID, the registered disposable target, and one bounded unified diff. Patch application remains disabled. Verifier is Docker-only. Boundary tests: 2 passed.
+
+- Executor approvals now bind the exact patch SHA-256, investigation, repository session, expiry, and consumption state. Patch policy rejects protected paths, traversal, binaries, symlinks, deletions, and oversized diffs. Focused tests: 5 passed.

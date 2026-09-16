@@ -364,3 +364,5 @@
 - Added proposal-only Remediation Planner: it accepts only ROOT_CAUSE_SUPPORTED, has no tools or write capability, and requires human approval. Planner boundary tests: 2 passed.
 
 - Added Docker-only sandbox executor and verifier boundaries. Executor rejects LocalRunner, missing approval, foreign repositories, and malformed patches; patch application remains disabled. Tests: 2 passed.
+
+- Hardened executor approvals to exact patch hashes plus repository/session/timestamp status. Added deterministic patch policy; 5 focused negative tests passed. Patch application still disabled pending Docker git apply check and verifier verdicts.

@@ -12,6 +12,27 @@ TraceRoot investigates software incidents, records evidence, and produces a root
 
 The current agents are Investigator, Evidence Auditor, and Remediation Planner. The planner has no tools or write permissions.
 
+## Architecture
+
+```mermaid
+flowchart TD
+    I[Incident] --> R[Deterministic reproduction]
+    R --> INV[Investigator]
+    INV --> TG[Read-only tool gateway]
+    TG --> ES[Shared evidence state]
+    ES --> AUD[Evidence Auditor]
+    AUD -->|Insufficient or contradicted| INV
+    AUD -->|Supported| RCA[Root-cause report]
+    RCA --> PLAN[Remediation Planner]
+    PLAN --> HUMAN[Human approval]
+    HUMAN --> GATE[Approval and patch policy]
+    GATE --> SANDBOX[Disposable Docker sandbox]
+    SANDBOX --> EXEC[Sandbox Executor]
+    EXEC --> VERIFY[Deterministic Verifier]
+    VERIFY -->|Verified| GIT[Future branch commit draft PR]
+    VERIFY -->|Failed| DISCARD[Discard sandbox]
+```
+
 ## Safety boundaries
 
 - Target source, logs, database inspection, configuration, Git, and tests are read-only during investigation.
@@ -48,3 +69,5 @@ The verifier must be deterministic because the planner must not judge its own pr
 Implementation logs and benchmark results are in [docs](docs/).
 
 Latest application verification: 122 passed, 4 skipped.
+
+Docker patch dry-run verification: 7 executor and dry-run tests passed.

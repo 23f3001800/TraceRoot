@@ -65,6 +65,7 @@ def image_context(context) -> bytes:
     dockerfile = """FROM python:3.12-slim
 WORKDIR /repo
 COPY repo/requirements.txt /tmp/requirements.txt
+RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir --only-binary=:all: -r /tmp/requirements.txt pytest==8.3.5 psycopg[binary]==3.2.6
 COPY repo/ /repo/
 COPY runtime/ /opt/traceroot/

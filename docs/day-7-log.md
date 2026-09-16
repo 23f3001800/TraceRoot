@@ -372,3 +372,5 @@
 - Full suite exposed legacy investigator state missing fields introduced by per-role measurements. Initialized all current state fields before rerunning.
 
 - Full TraceRoot application suite after legacy-state compatibility fix: 122 passed, 4 skipped in 16.93 seconds.
+
+- Added Docker-side git apply --check after approval and patch policy validation. Seven executor/dry-run tests passed. README architecture diagram added.

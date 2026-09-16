@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from ..contracts import ToolFailure
-from ..docker_runtime import require_active
+from ..docker_runtime import require_active, container_options, docker
 from .approval import load_approval, patch_hash, valid_now
 from .patch_policy import validate_patch
 @dataclass(frozen=True)
@@ -19,5 +19,12 @@ def validate_execution_request(context,request):
  if approval.repository!=str(Path(request.repository).resolve()) or approval.session_id!=context.config["id"]: raise ToolFailure("approval_scope_mismatch","Approval does not cover this repository session.")
  if Path(request.repository).resolve()!=Path(context.repository.source).resolve(): raise ToolFailure("repository_denied","Execution repository is not this disposable session.")
  return approval
+def docker_apply_check(context, request) -> dict:
+ validate_execution_request(context, request)
+ name = f"traceroot-apply-check-{context.config['id']}"
+ result = docker(context, ["run", "--rm", *container_options(context, name), context.config["image"], "git", "apply", "--check", "--whitespace=error-all", "-"], timeout=30, input_bytes=request.patch.encode(), limit=8192)
+ if result.timed_out: raise ToolFailure("patch_check_timeout", "Docker patch dry-run timed out.", "timeout")
+ if result.exit_code: raise ToolFailure("patch_rejected", "Docker git apply --check rejected the patch.")
+ return {"status": "PATCH_CHECKED", "approval_id": request.approval_id, "patch_hash": patch_hash(request.patch)}
 def execute_approved_patch(context,request):
- validate_execution_request(context,request); raise ToolFailure("execution_not_enabled","Patch application remains disabled until Docker dry-run validation is implemented.","unavailable")
+ docker_apply_check(context,request); raise ToolFailure("execution_not_enabled","Patch application is not enabled until the next ordered step.","unavailable")

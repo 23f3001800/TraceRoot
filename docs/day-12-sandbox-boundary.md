@@ -9,3 +9,9 @@ Verification: 2 executor-boundary tests passed.
 Approval records bind approval ID, investigation ID, patch SHA-256, repository, session, approver, timestamps, status, and consumption state. The executor rejects unknown, expired, consumed, foreign-session, and hash-mismatched approvals. Patch policy rejects traversal, protected paths, binary or symlink patches, deletion, oversized patches, too many files, and excessive changed lines. Patch application remains disabled until Docker-side git apply --check is implemented.
 
 Verification: 5 approval and patch-policy tests passed.
+
+## Docker patch dry-run
+
+The executor now runs git apply --check inside a Docker sandbox after exact approval and policy validation. The runtime image includes Git. A rejected dry run returns PATCH_REJECTED; patch application remains disabled until the next ordered step.
+
+Verification: 7 executor and dry-run tests passed.

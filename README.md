@@ -77,3 +77,5 @@ Approved Docker patch application is implemented and consumes the exact approval
 Deterministic verifier statuses are implemented and tested: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE.
 
 Sandbox rollback restores the base session image; sandbox destruction removes session-owned containers, network, and images.
+
+- BUG-001 end-to-end remediation is blocked until Docker Desktop WSL integration is available; no patch was applied.

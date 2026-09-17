@@ -33,3 +33,7 @@ Verification: 7 focused executor/verifier tests passed.
 Rollback removes only the derived session patch image and restores the base session image. Destruction calls the existing labeled container/network cleanup and removes session-owned images. The original repository remains unchanged.
 
 Verification: 7 lifecycle, executor, and verifier tests passed.
+
+## BUG-001 execution attempt
+
+A disposable BUG-001 checkout was created, but Docker preparation returned docker_unavailable. WSL reports that Docker Desktop integration is disabled. No patch, approval record, model call, or target write occurred.

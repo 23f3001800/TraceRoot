@@ -380,3 +380,5 @@
 - Added deterministic verifier verdicts: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE. Seven focused tests passed.
 
 - Added rollback and destruction for derived session patch images. Seven focused lifecycle/executor/verifier tests passed.
+
+- BUG-001 end-to-end remediation preparation blocked before sandbox creation: Docker Desktop WSL integration is unavailable. No patch or approval action occurred.

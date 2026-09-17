@@ -21,3 +21,9 @@ Verification: 7 executor and dry-run tests passed.
 The executor creates a disposable Docker container from the session image, applies the exact approved patch through git apply, commits only that container to a derived sandbox image, removes the container, and consumes the approval. It does not touch the original repository. This boundary has focused tests but has not yet been exercised with a real human-approved benchmark patch.
 
 Verification: 8 executor tests passed.
+
+## Deterministic verification
+
+Verification first reruns the original reproduction. If it still fails, status is REPRODUCTION_STILL_FAILS. Otherwise it runs the regression selection. A clean result is FIX_VERIFIED; a failing regression is REGRESSION_INTRODUCED; abnormal tool results are VERIFICATION_TOOL_FAILURE.
+
+Verification: 7 focused executor/verifier tests passed.

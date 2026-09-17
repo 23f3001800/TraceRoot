@@ -376,3 +376,5 @@
 - Added Docker-side git apply --check after approval and patch policy validation. Seven executor/dry-run tests passed. README architecture diagram added.
 
 - Implemented bounded Docker approved-patch application and approval consumption. Eight focused tests passed; no real approved patch has been executed yet.
+
+- Added deterministic verifier verdicts: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE. Seven focused tests passed.

@@ -20,7 +20,7 @@ The Investigator receives only the repository checkout, incident report, public 
 
 | Case | Repository | Public report | Evaluation status |
 | --- | --- | --- | --- |
-| OSS-001 | pallets/flask | Issue 4170: application factory invocation regression | Screened; isolate fixing commit next. |
+| OSS-001 | pallets/flask | Issue 4170: application factory invocation regression | Private pre-fix revision isolated; public reproduction setup next. |
 | OSS-002 | pallets/flask | Issue 4043: dependency compatibility regression | Screened; isolate fixing commit next. |
 | OSS-003 | pytest-dev/pytest | Issue 3854: duplicate collection regression | Screened; isolate fixing commit next. |
 | OSS-004 | pytest-dev/pytest | Issue 5301: last-failed behavior regression | Screened; isolate fixing commit next. |
@@ -35,3 +35,7 @@ For each eligible case, record reproduction success, root-cause category accurac
 ## Provider order
 
 Use OpenRouter free model first. Gemini is retried only after its provider health recovers. Azure remains fallback and is not used for this phase unless the first two are unavailable.
+
+## OSS-001 setup log
+
+A disposable Flask clone was acquired and its private pre-fix revision was isolated from the historical fix. No source, test, provider call, or remediation run has been sent to TraceRoot yet.

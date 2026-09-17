@@ -99,3 +99,5 @@ The UI is an incident-response workspace, not a coding editor; it shows evidence
 BUG-001 completed in a disposable Docker session. The exact approved patch was applied to a derived image only. The original reproduction passed **1/1** and the regression suite passed **14/14**. The approval was consumed and the session containers, network, base image, and derived image were destroyed.
 
 Latest benchmark result: BUG-003 exact approved remediation returned FIX_VERIFIED in Docker. The retry reproduction passed 1/1 and the regression suite passed 15/15; its disposable sandbox was destroyed.
+
+Latest benchmark reproduction: BUG-004 failed 1/1 in Docker. Payment returned HTTP 500 where 201 is expected after the httpx upgrade; no remediation is proposed or applied.

@@ -77,3 +77,15 @@ Verification: live Docker reproduction 0 passed, 1 failed.
 A human approved exact patch a97eaae2...73abf for disposable session cddd103aef8a. The derived Docker image reused an existing order for repeated idempotency keys. Deterministic verification returned FIX_VERIFIED: retry reproduction passed 1/1 and target regression passed 15/15. The approval was consumed and the sandbox was destroyed. The disposable checkout retains only its intentionally injected benchmark files; no executor patch was written to it.
 
 Verification: live Docker reproduction 1 passed; live Docker regression 15 passed.
+
+## BUG-004 preparation status
+
+Disposable session be2c2ba7eef1 was inactive before its public reproduction could execute. TraceRoot returned environment_unavailable and stopped. No investigator call, remediation proposal, approval, or patch application occurred.
+
+Verification: reproduction unavailable; no tests executed.
+
+## BUG-004 Docker reproduction retry
+
+A transient inactive-session setup was retried using disposable session 25bebaec18d5. Public test tests/test_bug_004.py failed 1/1: payment returned HTTP 500 where 201 is expected. No remediation proposal, approval, or patch application occurred.
+
+Verification: live Docker reproduction 0 passed, 1 failed.

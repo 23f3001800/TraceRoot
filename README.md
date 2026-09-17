@@ -75,3 +75,5 @@ Docker patch dry-run verification: 7 executor and dry-run tests passed.
 Approved Docker patch application is implemented and consumes the exact approval. It is unit-tested but not yet exercised with a real human-approved patch.
 
 Deterministic verifier statuses are implemented and tested: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE.
+
+Sandbox rollback restores the base session image; sandbox destruction removes session-owned containers, network, and images.

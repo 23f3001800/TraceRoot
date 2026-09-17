@@ -27,3 +27,9 @@ Verification: 8 executor tests passed.
 Verification first reruns the original reproduction. If it still fails, status is REPRODUCTION_STILL_FAILS. Otherwise it runs the regression selection. A clean result is FIX_VERIFIED; a failing regression is REGRESSION_INTRODUCED; abnormal tool results are VERIFICATION_TOOL_FAILURE.
 
 Verification: 7 focused executor/verifier tests passed.
+
+## Rollback and destruction
+
+Rollback removes only the derived session patch image and restores the base session image. Destruction calls the existing labeled container/network cleanup and removes session-owned images. The original repository remains unchanged.
+
+Verification: 7 lifecycle, executor, and verifier tests passed.

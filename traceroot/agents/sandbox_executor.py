@@ -47,9 +47,38 @@ def execute_approved_patch(context, request):
         if result.timed_out or result.exit_code: raise ToolFailure("patch_application_failed", "Docker git apply failed.", "error")
         result = docker(context, ["commit", "--pause", container, image], timeout=60, limit=8192)
         if result.exit_code: raise ToolFailure("patch_application_failed", "Could not create the patched sandbox image.", "error")
+        context.config["base_image"] = context.config["image"]
         context.config["image"] = image
+        context.config["patched_image"] = image
         context.save()
         consume_approval(context, request.approval_id)
         return {"status": "PATCH_APPLIED", "approval_id": request.approval_id, "patch_hash": patch_hash(request.patch), "image": image}
     finally:
         if created: docker(context, ["rm", "-f", container], timeout=10, limit=8192)
+
+def rollback_patch(context) -> dict:
+    patched = context.config.get("patched_image")
+    base = context.config.get("base_image")
+    if not patched or not base:
+        raise ToolFailure("rollback_unavailable", "No derived patch image exists.", "rejected")
+    result = docker(context, ["image", "rm", patched], timeout=30, limit=8192)
+    if result.exit_code:
+        raise ToolFailure("rollback_failed", "Could not remove the derived patch image.", "error")
+    context.config["image"] = base
+    context.config.pop("patched_image", None)
+    context.config.pop("base_image", None)
+    context.save()
+    return {"status": "PATCH_ROLLED_BACK", "image": patched}
+
+def destroy_sandbox(context) -> dict:
+    from ..docker_runtime import cleanup
+    patched = context.config.get("patched_image")
+    base = context.config.get("base_image") or context.config.get("image")
+    cleanup(context)
+    removed=[]
+    for image in (patched, base):
+        if image and image.startswith(f"traceroot-investigation:{context.config['id']}") or (image and image.startswith(f"traceroot-investigation:{context.config['id']}-patch-")):
+            result=docker(context, ["image", "rm", image], timeout=30, limit=8192)
+            if result.exit_code: raise ToolFailure("destruction_failed", "Could not remove a session image.", "error")
+            removed.append(image)
+    return {"status":"SANDBOX_DESTROYED","images_removed":removed}

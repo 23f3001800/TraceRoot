@@ -386,3 +386,7 @@
 - Added loopback-only approval UI for exact patch, repository, session, and investigation-bound approvals. Six focused UI/executor tests passed.
 
 - Replaced minimal approval page with an accessible full dashboard in root ui/. The loopback server now serves UI assets and local approval API.
+
+- Fixed missing Path import in approval UI server and added a UI asset-root smoke test.
+
+- Moved approval API into traceroot/api and added loopback WebSocket communication between dashboard and backend. Two UI API tests passed.

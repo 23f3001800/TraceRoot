@@ -49,3 +49,9 @@ Verification: 6 approval UI and executor tests passed.
 The root `ui/` directory contains an accessible responsive approval dashboard. The loopback server exposes the patch context through a local API and records approval only after the review form submission.
 
 Verification: 1 focused UI server test passed.
+
+## API and WebSocket communication
+
+Approval APIs live in `traceroot/api/approval.py`. The UI loads patch context from the local API and opens a loopback WebSocket for live context and approval events. HTTP approval submission remains the fallback.
+
+Verification: 2 focused UI API tests passed.

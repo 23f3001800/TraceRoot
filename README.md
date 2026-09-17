@@ -85,3 +85,7 @@ Sandbox rollback restores the base session image; sandbox destruction removes se
 Run `python -m traceroot approval-ui --session SESSION --patch-file PATCH --investigation-id ID`. Open the displayed localhost URL, inspect the exact diff and SHA-256, then approve it. The UI is loopback-only and writes the same bound approval record used by the executor.
 
 The full local dashboard lives in `ui/` and is served by `approval-ui` on localhost.
+
+Approval UI runtime smoke test added after missing import fix.
+
+The approval dashboard uses a loopback WebSocket for live backend-to-frontend approval events. APIs live under `traceroot/api/`.

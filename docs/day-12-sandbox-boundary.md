@@ -89,3 +89,7 @@ Verification: reproduction unavailable; no tests executed.
 A transient inactive-session setup was retried using disposable session 25bebaec18d5. Public test tests/test_bug_004.py failed 1/1: payment returned HTTP 500 where 201 is expected. No remediation proposal, approval, or patch application occurred.
 
 Verification: live Docker reproduction 0 passed, 1 failed.
+
+## BUG-004 remediation candidate
+
+The review-only candidate preserves the configured proxy while replacing the obsolete httpx proxies keyword with proxy. It is bound to disposable session 25bebaec18d5 and awaits exact human approval.

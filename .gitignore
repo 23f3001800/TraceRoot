@@ -10,3 +10,19 @@ __pycache__/
 .day6-work/
 
 .day6-live/
+
+# Generated local artifacts
+*.log
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+node_modules/
+.DS_Store
+Thumbs.db
+ui/.cache/
+docs/generated/
+docs/runs/

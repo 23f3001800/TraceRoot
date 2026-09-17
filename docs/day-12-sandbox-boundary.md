@@ -93,3 +93,7 @@ Verification: live Docker reproduction 0 passed, 1 failed.
 ## BUG-004 remediation candidate
 
 The review-only candidate preserves the configured proxy while replacing the obsolete httpx proxies keyword with proxy. It is bound to disposable session 25bebaec18d5 and awaits exact human approval.
+
+## Repository hygiene
+
+Git ignores generated sessions, logs, coverage, caches, packages, local credentials, UI cache files, and generated run documents. Required README and milestone logs remain versioned.

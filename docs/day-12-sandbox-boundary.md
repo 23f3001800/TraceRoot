@@ -65,3 +65,9 @@ The dashboard now presents incident, evidence, audit, remediation, and sandbox s
 A human approved exact patch c80f421c...e8775 for disposable session c3c42b6d7e6c. TraceRoot validated approval scope and policy, completed Docker-side git apply --check, applied the patch only to a derived sandbox image, then consumed the approval. Deterministic verification returned FIX_VERIFIED: public bulk-order reproduction passed 1/1 and target regression passed 14/14. Sandbox destruction removed that session's containers, network, base image, and derived image. The target checkout still contains its intentionally injected BUG-001 change; the executor did not alter it.
 
 Verification: live Docker reproduction 1 passed; live Docker regression 14 passed.
+
+## BUG-003 Docker reproduction
+
+Disposable Docker session d29d56e32eda ran public test tests/test_bug_003.py. It failed 1/1: repeated retry requests returned different order IDs, 1 then 2. This is runtime evidence only; no BUG-003 remediation was proposed, approved, or applied.
+
+Verification: live Docker reproduction 0 passed, 1 failed.

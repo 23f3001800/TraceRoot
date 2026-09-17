@@ -97,3 +97,5 @@ The UI is an incident-response workspace, not a coding editor; it shows evidence
 ## Latest live remediation result
 
 BUG-001 completed in a disposable Docker session. The exact approved patch was applied to a derived image only. The original reproduction passed **1/1** and the regression suite passed **14/14**. The approval was consumed and the session containers, network, base image, and derived image were destroyed.
+
+Latest benchmark reproduction: BUG-003 failed 1/1 in Docker. A retry returned order IDs 1 then 2. No BUG-003 patch has been proposed or applied.

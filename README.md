@@ -40,7 +40,7 @@ flowchart TD
 - LocalRunner is investigation-only.
 - DockerRunner is required for future execution.
 - Exact-diff human approvals bind patch hash, investigation, repository, sandbox session, expiry, and consumption state.
-- Patch application is disabled. The executor rejects unsafe or unapproved patches.
+- Patch application is allowed only after exact human approval, deterministic patch-policy validation, Docker-side git apply --check, and Docker-only execution.
 
 ## Status
 
@@ -72,13 +72,13 @@ Latest application verification: 122 passed, 4 skipped.
 
 Docker patch dry-run verification: 7 executor and dry-run tests passed.
 
-Approved Docker patch application is implemented and consumes the exact approval. It is unit-tested but not yet exercised with a real human-approved patch.
+Approved Docker patch application was exercised with a real human-approved BUG-001 patch. The approval was consumed, the original reproduction passed, and the regression suite passed.
 
 Deterministic verifier statuses are implemented and tested: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE.
 
 Sandbox rollback restores the base session image; sandbox destruction removes session-owned containers, network, and images.
 
-- BUG-001 end-to-end remediation is blocked until Docker Desktop WSL integration is available; no patch was applied.
+- BUG-001 end-to-end remediation completed: exact approval, Docker patch check, derived-image apply, reproduction 1/1 passing, regression 14/14 passing, and sandbox destruction.
 
 ## Approval interface
 
@@ -93,3 +93,7 @@ The approval dashboard uses a loopback WebSocket for live backend-to-frontend ap
 Docker patch dry-run now streams the approved diff with interactive stdin.
 
 The UI is an incident-response workspace, not a coding editor; it shows evidence, audit, remediation, and sandbox approval state.
+
+## Latest live remediation result
+
+BUG-001 completed in a disposable Docker session. The exact approved patch was applied to a derived image only. The original reproduction passed **1/1** and the regression suite passed **14/14**. The approval was consumed and the session containers, network, base image, and derived image were destroyed.

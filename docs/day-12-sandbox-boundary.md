@@ -59,3 +59,9 @@ Verification: 2 focused UI API tests passed.
 BUG-001 validation found and fixed Docker patch stdin transport. The regenerated candidate passes Docker git apply --check.
 
 The dashboard now presents incident, evidence, audit, remediation, and sandbox state rather than a code-editor workflow. Exact patch byte hashing is verified.
+
+## BUG-001 verified end-to-end remediation
+
+A human approved exact patch c80f421c...e8775 for disposable session c3c42b6d7e6c. TraceRoot validated approval scope and policy, completed Docker-side git apply --check, applied the patch only to a derived sandbox image, then consumed the approval. Deterministic verification returned FIX_VERIFIED: public bulk-order reproduction passed 1/1 and target regression passed 14/14. Sandbox destruction removed that session's containers, network, base image, and derived image. The target checkout still contains its intentionally injected BUG-001 change; the executor did not alter it.
+
+Verification: live Docker reproduction 1 passed; live Docker regression 14 passed.

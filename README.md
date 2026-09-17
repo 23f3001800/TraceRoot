@@ -119,3 +119,7 @@ After FIX_VERIFIED, TraceRoot can create a clean local traceroot/ branch and com
 After FIX_VERIFIED, TraceRoot can prepare a bounded PR-ready title and body from incident, evidence, remediation, files, verification, and limitations. It rejects secrets and unverified requests, and does not publish. Focused verification: 2 passed.
 
 Latest full verification: 138 passed, 4 skipped.
+
+## Target commit approval
+
+Local target branch commits require a separate persisted approval bound to target repository, sandbox session, exact action hash, branch, patch, commit message, and FIX_VERIFIED status. The approval is consumed after the commit succeeds. Focused verification: 8 passed.

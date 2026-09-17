@@ -119,3 +119,11 @@ TraceRoot now produces a non-publishing PR-ready report only after FIX_VERIFIED.
 Verification: 2 focused draft-PR tests passed.
 
 Full verification after draft-PR preparation: 138 passed, 4 skipped.
+
+## Target commit approval binding
+
+Verified local commits now require a distinct target-commit approval record. It binds target repository, session, investigation, exact action hash, approver, expiry, status, and consumption. TraceRoot rejects missing, mismatched, expired, or consumed target approvals.
+
+Verification: 8 focused approval, executor, and target-commit tests passed.
+
+Full verification after target commit approval: 138 passed, 4 skipped.

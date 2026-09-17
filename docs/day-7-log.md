@@ -384,3 +384,5 @@
 - BUG-001 end-to-end remediation preparation blocked before sandbox creation: Docker Desktop WSL integration is unavailable. No patch or approval action occurred.
 
 - Added loopback-only approval UI for exact patch, repository, session, and investigation-bound approvals. Six focused UI/executor tests passed.
+
+- Replaced minimal approval page with an accessible full dashboard in root ui/. The loopback server now serves UI assets and local approval API.

@@ -43,3 +43,9 @@ A disposable BUG-001 checkout was created, but Docker preparation returned docke
 The operator can serve a loopback-only exact-patch approval page through `approval-ui`. It shows patch text, hash, repository, sandbox session, and investigation ID before writing a one-hour approval record.
 
 Verification: 6 approval UI and executor tests passed.
+
+## Full approval dashboard
+
+The root `ui/` directory contains an accessible responsive approval dashboard. The loopback server exposes the patch context through a local API and records approval only after the review form submission.
+
+Verification: 1 focused UI server test passed.

@@ -105,3 +105,7 @@ Latest benchmark reproduction: BUG-004 failed 1/1 in Docker. Payment returned HT
 ## Repository hygiene
 
 Generated sessions, caches, logs, local credentials, UI caches, and generated run documents are ignored. Required README and milestone documentation remain tracked.
+
+Provider probe: Gemini 2.5 Flash returned MODEL_PROVIDER_FAILURE in 1.98 seconds for a harmless JSON health check. No target or incident data was sent.
+
+Provider probe: OpenRouter nex-agi/nex-n2.5-mini:free returned valid JSON in 1.24 seconds (24 input, 8 output tokens). It is the preferred provider before Azure fallback.

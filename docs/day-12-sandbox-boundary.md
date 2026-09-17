@@ -97,3 +97,11 @@ The review-only candidate preserves the configured proxy while replacing the obs
 ## Repository hygiene
 
 Git ignores generated sessions, logs, coverage, caches, packages, local credentials, UI cache files, and generated run documents. Required README and milestone logs remain versioned.
+
+## Gemini provider health probe
+
+Gemini 2.5 Flash received one harmless structured JSON request with no repository, incident, benchmark, or target data. It returned a non-retryable MODEL_PROVIDER_FAILURE after 1.98 seconds. This is provider availability evidence, not an investigation result.
+
+## OpenRouter provider health probe
+
+Configured free model nex-agi/nex-n2.5-mini:free received the same harmless structured JSON request. It returned valid JSON in 1.24 seconds using 24 input and 8 output tokens. TraceRoot will prefer it before Azure fallback.

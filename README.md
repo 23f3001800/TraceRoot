@@ -109,3 +109,7 @@ Generated sessions, caches, logs, local credentials, UI caches, and generated ru
 Provider probe: Gemini 2.5 Flash returned MODEL_PROVIDER_FAILURE in 1.98 seconds for a harmless JSON health check. No target or incident data was sent.
 
 Provider probe: OpenRouter nex-agi/nex-n2.5-mini:free returned valid JSON in 1.24 seconds (24 input, 8 output tokens). It is the preferred provider before Azure fallback.
+
+## Verified branch workflow
+
+After FIX_VERIFIED, TraceRoot can create a clean local traceroot/ branch and commit the exact policy-validated patch. It never pushes, merges, or opens a PR. Focused verification: 2 passed.

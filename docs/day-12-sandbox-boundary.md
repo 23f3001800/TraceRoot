@@ -105,3 +105,9 @@ Gemini 2.5 Flash received one harmless structured JSON request with no repositor
 ## OpenRouter provider health probe
 
 Configured free model nex-agi/nex-n2.5-mini:free received the same harmless structured JSON request. It returned valid JSON in 1.24 seconds using 24 input and 8 output tokens. TraceRoot will prefer it before Azure fallback.
+
+## Verified branch and commit workflow
+
+A bounded local Git workflow now requires FIX_VERIFIED, a clean repository, an exact policy-valid patch, a traceroot/ branch name, and a three-to-seven-word commit message. It creates no remote state and never pushes or opens a PR.
+
+Verification: 2 focused isolated Git tests passed.

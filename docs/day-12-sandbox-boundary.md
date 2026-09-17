@@ -71,3 +71,9 @@ Verification: live Docker reproduction 1 passed; live Docker regression 14 passe
 Disposable Docker session d29d56e32eda ran public test tests/test_bug_003.py. It failed 1/1: repeated retry requests returned different order IDs, 1 then 2. This is runtime evidence only. A review-only candidate now returns an existing order for a repeated idempotency key; it has not been approved or applied.
 
 Verification: live Docker reproduction 0 passed, 1 failed.
+
+## BUG-003 verified end-to-end remediation
+
+A human approved exact patch a97eaae2...73abf for disposable session cddd103aef8a. The derived Docker image reused an existing order for repeated idempotency keys. Deterministic verification returned FIX_VERIFIED: retry reproduction passed 1/1 and target regression passed 15/15. The approval was consumed and the sandbox was destroyed. The disposable checkout retains only its intentionally injected benchmark files; no executor patch was written to it.
+
+Verification: live Docker reproduction 1 passed; live Docker regression 15 passed.

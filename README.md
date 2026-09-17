@@ -98,4 +98,4 @@ The UI is an incident-response workspace, not a coding editor; it shows evidence
 
 BUG-001 completed in a disposable Docker session. The exact approved patch was applied to a derived image only. The original reproduction passed **1/1** and the regression suite passed **14/14**. The approval was consumed and the session containers, network, base image, and derived image were destroyed.
 
-Latest benchmark reproduction: BUG-003 failed 1/1 in Docker. A retry returned order IDs 1 then 2. Its review-only candidate returns an existing order for a repeated idempotency key; it awaits exact human approval.
+Latest benchmark result: BUG-003 exact approved remediation returned FIX_VERIFIED in Docker. The retry reproduction passed 1/1 and the regression suite passed 15/15; its disposable sandbox was destroyed.

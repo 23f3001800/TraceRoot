@@ -91,3 +91,5 @@ Approval UI runtime smoke test added after missing import fix.
 The approval dashboard uses a loopback WebSocket for live backend-to-frontend approval events. APIs live under `traceroot/api/`.
 
 Docker patch dry-run now streams the approved diff with interactive stdin.
+
+The UI is an incident-response workspace, not a coding editor; it shows evidence, audit, remediation, and sandbox approval state.

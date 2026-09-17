@@ -57,3 +57,5 @@ Approval APIs live in `traceroot/api/approval.py`. The UI loads patch context fr
 Verification: 2 focused UI API tests passed.
 
 BUG-001 validation found and fixed Docker patch stdin transport. The regenerated candidate passes Docker git apply --check.
+
+The dashboard now presents incident, evidence, audit, remediation, and sandbox state rather than a code-editor workflow. Exact patch byte hashing is verified.

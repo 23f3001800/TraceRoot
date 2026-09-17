@@ -9,7 +9,7 @@ from websockets.asyncio.server import serve
 from ..agents.approval import ApprovalRecord, patch_hash, save_approval
 class ApprovalAPI:
  def __init__(self,context,patch_path,investigation_id):
-  self.context=context;self.patch=Path(patch_path).read_text();self.investigation_id=investigation_id;self.digest=patch_hash(self.patch);self.clients=set()
+  self.context=context;self.patch=Path(patch_path).read_bytes().decode("utf-8");self.investigation_id=investigation_id;self.digest=patch_hash(self.patch);self.clients=set()
  def payload(self): return {"type":"approval_context","investigation":self.investigation_id,"repository":self.context.repository.source,"session":self.context.config["id"],"hash":self.digest,"patch":self.patch}
  async def websocket(self,ws):
   self.clients.add(ws);await ws.send(json.dumps(self.payload()))

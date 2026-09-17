@@ -392,3 +392,5 @@
 - Moved approval API into traceroot/api and added loopback WebSocket communication between dashboard and backend. Two UI API tests passed.
 
 - BUG-001 Docker dry-run exposed missing interactive stdin. Fixed patch transport; regenerated candidate passes Docker git apply --check.
+
+- Redesigned UI as incident workspace and preserved exact patch bytes for approval hash binding. Three UI tests passed.

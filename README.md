@@ -89,3 +89,5 @@ The full local dashboard lives in `ui/` and is served by `approval-ui` on localh
 Approval UI runtime smoke test added after missing import fix.
 
 The approval dashboard uses a loopback WebSocket for live backend-to-frontend approval events. APIs live under `traceroot/api/`.
+
+Docker patch dry-run now streams the approved diff with interactive stdin.

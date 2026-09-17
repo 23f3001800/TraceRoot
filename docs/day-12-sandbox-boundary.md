@@ -55,3 +55,5 @@ Verification: 1 focused UI server test passed.
 Approval APIs live in `traceroot/api/approval.py`. The UI loads patch context from the local API and opens a loopback WebSocket for live context and approval events. HTTP approval submission remains the fallback.
 
 Verification: 2 focused UI API tests passed.
+
+BUG-001 validation found and fixed Docker patch stdin transport. The regenerated candidate passes Docker git apply --check.

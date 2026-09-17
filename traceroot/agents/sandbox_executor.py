@@ -22,7 +22,7 @@ def validate_execution_request(context,request):
 def docker_apply_check(context, request) -> dict:
  validate_execution_request(context, request)
  name = f"traceroot-apply-check-{context.config['id']}"
- result = docker(context, ["run", "--rm", *container_options(context, name), context.config["image"], "git", "apply", "--check", "--whitespace=error-all", "-"], timeout=30, input_bytes=request.patch.encode(), limit=8192)
+ result = docker(context, ["run", "--rm", "-i", *container_options(context, name), context.config["image"], "git", "apply", "--check", "--whitespace=error-all", "-"], timeout=30, input_bytes=request.patch.encode(), limit=8192)
  if result.timed_out: raise ToolFailure("patch_check_timeout", "Docker patch dry-run timed out.", "timeout")
  if result.exit_code: raise ToolFailure("patch_rejected", "Docker git apply --check rejected the patch.")
  return {"status": "PATCH_CHECKED", "approval_id": request.approval_id, "patch_hash": patch_hash(request.patch)}

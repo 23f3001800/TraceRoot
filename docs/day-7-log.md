@@ -390,3 +390,5 @@
 - Fixed missing Path import in approval UI server and added a UI asset-root smoke test.
 
 - Moved approval API into traceroot/api and added loopback WebSocket communication between dashboard and backend. Two UI API tests passed.
+
+- BUG-001 Docker dry-run exposed missing interactive stdin. Fixed patch transport; regenerated candidate passes Docker git apply --check.

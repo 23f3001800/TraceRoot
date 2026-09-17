@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from ..contracts import ToolFailure
 from ..docker_runtime import require_active, container_options, docker
-from .approval import load_approval, patch_hash, valid_now
+from .approval import load_approval, patch_hash, valid_now, consume_approval
 from .patch_policy import validate_patch
 @dataclass(frozen=True)
 class ExecutionRequest:
@@ -26,5 +26,30 @@ def docker_apply_check(context, request) -> dict:
  if result.timed_out: raise ToolFailure("patch_check_timeout", "Docker patch dry-run timed out.", "timeout")
  if result.exit_code: raise ToolFailure("patch_rejected", "Docker git apply --check rejected the patch.")
  return {"status": "PATCH_CHECKED", "approval_id": request.approval_id, "patch_hash": patch_hash(request.patch)}
-def execute_approved_patch(context,request):
- docker_apply_check(context,request); raise ToolFailure("execution_not_enabled","Patch application is not enabled until the next ordered step.","unavailable")
+def execute_approved_patch(context, request):
+    docker_apply_check(context, request)
+    suffix = patch_hash(request.patch)[:12]
+    container = f"traceroot-apply-{context.config['id']}-{suffix}"
+    image = f"{context.config['image']}-patch-{suffix}"
+    options = ["create", "--name", container, "--label", f"traceroot.session={context.config['id']}",
+               "--network", "none", "--user", "0:0", "--cap-drop", "ALL",
+               "--security-opt", "no-new-privileges:true", "--memory", "256m",
+               "--cpus", "1", "--pids-limit", "64", "--workdir", "/repo",
+               context.config["image"], "sleep", "30"]
+    created = False
+    try:
+        result = docker(context, options, timeout=30, limit=8192)
+        if result.exit_code: raise ToolFailure("patch_application_failed", "Could not create the disposable patch container.", "error")
+        created = True
+        result = docker(context, ["start", container], timeout=15, limit=8192)
+        if result.exit_code: raise ToolFailure("patch_application_failed", "Could not start the disposable patch container.", "error")
+        result = docker(context, ["exec", "-i", container, "git", "apply", "--whitespace=error-all", "-"], timeout=30, input_bytes=request.patch.encode(), limit=8192)
+        if result.timed_out or result.exit_code: raise ToolFailure("patch_application_failed", "Docker git apply failed.", "error")
+        result = docker(context, ["commit", "--pause", container, image], timeout=60, limit=8192)
+        if result.exit_code: raise ToolFailure("patch_application_failed", "Could not create the patched sandbox image.", "error")
+        context.config["image"] = image
+        context.save()
+        consume_approval(context, request.approval_id)
+        return {"status": "PATCH_APPLIED", "approval_id": request.approval_id, "patch_hash": patch_hash(request.patch), "image": image}
+    finally:
+        if created: docker(context, ["rm", "-f", container], timeout=10, limit=8192)

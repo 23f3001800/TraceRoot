@@ -22,3 +22,11 @@ def load_approval(context, approval_id: str) -> ApprovalRecord:
     if not path.is_file(): raise ValueError("Unknown approval.")
     return ApprovalRecord(**json.loads(path.read_text()))
 def valid_now(value: str) -> bool: return datetime.fromisoformat(value.replace("Z","+00:00")) > datetime.now(timezone.utc)
+
+def consume_approval(context, approval_id: str) -> ApprovalRecord:
+    record = load_approval(context, approval_id)
+    if record.status != "APPROVED" or record.consumed_at:
+        raise ValueError("Approval is not consumable.")
+    consumed = ApprovalRecord(**{**asdict(record), "status": "CONSUMED", "consumed_at": datetime.now(timezone.utc).isoformat()})
+    save_approval(context, consumed)
+    return consumed

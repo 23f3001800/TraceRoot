@@ -71,3 +71,5 @@ Implementation logs and benchmark results are in [docs](docs/).
 Latest application verification: 122 passed, 4 skipped.
 
 Docker patch dry-run verification: 7 executor and dry-run tests passed.
+
+Approved Docker patch application is implemented and consumes the exact approval. It is unit-tested but not yet exercised with a real human-approved patch.

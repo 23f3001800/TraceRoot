@@ -15,3 +15,9 @@ Verification: 5 approval and patch-policy tests passed.
 The executor now runs git apply --check inside a Docker sandbox after exact approval and policy validation. The runtime image includes Git. A rejected dry run returns PATCH_REJECTED; patch application remains disabled until the next ordered step.
 
 Verification: 7 executor and dry-run tests passed.
+
+## Approved patch application
+
+The executor creates a disposable Docker container from the session image, applies the exact approved patch through git apply, commits only that container to a derived sandbox image, removes the container, and consumes the approval. It does not touch the original repository. This boundary has focused tests but has not yet been exercised with a real human-approved benchmark patch.
+
+Verification: 8 executor tests passed.

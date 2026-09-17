@@ -374,3 +374,5 @@
 - Full TraceRoot application suite after legacy-state compatibility fix: 122 passed, 4 skipped in 16.93 seconds.
 
 - Added Docker-side git apply --check after approval and patch policy validation. Seven executor/dry-run tests passed. README architecture diagram added.
+
+- Implemented bounded Docker approved-patch application and approval consumption. Eight focused tests passed; no real approved patch has been executed yet.

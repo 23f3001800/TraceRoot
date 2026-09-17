@@ -113,3 +113,9 @@ Provider probe: OpenRouter nex-agi/nex-n2.5-mini:free returned valid JSON in 1.2
 ## Verified branch workflow
 
 After FIX_VERIFIED, TraceRoot can create a clean local traceroot/ branch and commit the exact policy-validated patch. It never pushes, merges, or opens a PR. Focused verification: 2 passed.
+
+## Draft PR preparation
+
+After FIX_VERIFIED, TraceRoot can prepare a bounded PR-ready title and body from incident, evidence, remediation, files, verification, and limitations. It rejects secrets and unverified requests, and does not publish. Focused verification: 2 passed.
+
+Latest full verification: 138 passed, 4 skipped.

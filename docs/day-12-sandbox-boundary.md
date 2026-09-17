@@ -111,3 +111,11 @@ Configured free model nex-agi/nex-n2.5-mini:free received the same harmless stru
 A bounded local Git workflow now requires FIX_VERIFIED, a clean repository, an exact policy-valid patch, a traceroot/ branch name, and a three-to-seven-word commit message. It creates no remote state and never pushes or opens a PR.
 
 Verification: 2 focused isolated Git tests passed.
+
+## Draft PR preparation
+
+TraceRoot now produces a non-publishing PR-ready report only after FIX_VERIFIED. It includes incident, root cause, evidence, remediation, changed files, verification, limitations, branch, commit, and investigation ID. Secrets and unverified requests are rejected.
+
+Verification: 2 focused draft-PR tests passed.
+
+Full verification after draft-PR preparation: 138 passed, 4 skipped.

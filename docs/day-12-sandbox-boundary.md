@@ -68,6 +68,6 @@ Verification: live Docker reproduction 1 passed; live Docker regression 14 passe
 
 ## BUG-003 Docker reproduction
 
-Disposable Docker session d29d56e32eda ran public test tests/test_bug_003.py. It failed 1/1: repeated retry requests returned different order IDs, 1 then 2. This is runtime evidence only; no BUG-003 remediation was proposed, approved, or applied.
+Disposable Docker session d29d56e32eda ran public test tests/test_bug_003.py. It failed 1/1: repeated retry requests returned different order IDs, 1 then 2. This is runtime evidence only. A review-only candidate now returns an existing order for a repeated idempotency key; it has not been approved or applied.
 
 Verification: live Docker reproduction 0 passed, 1 failed.

@@ -79,3 +79,7 @@ Deterministic verifier statuses are implemented and tested: FIX_VERIFIED, REPROD
 Sandbox rollback restores the base session image; sandbox destruction removes session-owned containers, network, and images.
 
 - BUG-001 end-to-end remediation is blocked until Docker Desktop WSL integration is available; no patch was applied.
+
+## Approval interface
+
+Run `python -m traceroot approval-ui --session SESSION --patch-file PATCH --investigation-id ID`. Open the displayed localhost URL, inspect the exact diff and SHA-256, then approve it. The UI is loopback-only and writes the same bound approval record used by the executor.

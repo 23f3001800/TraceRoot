@@ -37,3 +37,9 @@ Verification: 7 lifecycle, executor, and verifier tests passed.
 ## BUG-001 execution attempt
 
 A disposable BUG-001 checkout was created, but Docker preparation returned docker_unavailable. WSL reports that Docker Desktop integration is disabled. No patch, approval record, model call, or target write occurred.
+
+## Local approval interface
+
+The operator can serve a loopback-only exact-patch approval page through `approval-ui`. It shows patch text, hash, repository, sandbox session, and investigation ID before writing a one-hour approval record.
+
+Verification: 6 approval UI and executor tests passed.

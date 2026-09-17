@@ -382,3 +382,5 @@
 - Added rollback and destruction for derived session patch images. Seven focused lifecycle/executor/verifier tests passed.
 
 - BUG-001 end-to-end remediation preparation blocked before sandbox creation: Docker Desktop WSL integration is unavailable. No patch or approval action occurred.
+
+- Added loopback-only approval UI for exact patch, repository, session, and investigation-bound approvals. Six focused UI/executor tests passed.

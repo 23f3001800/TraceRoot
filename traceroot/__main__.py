@@ -37,9 +37,18 @@ def main():
     resume.add_argument("--env-file", type=Path, default=Path(".env"))
     resume.add_argument("--retry-invalid", action="store_true", help="Retry a finished invalid-decision checkpoint after a contract update.")
     commands.add_parser("tool-schemas", help="Print the six model-facing tool contracts")
+    approval_ui = commands.add_parser("approval-ui", help="Serve a loopback-only exact-patch approval page")
+    approval_ui.add_argument("--session", type=Path, required=True)
+    approval_ui.add_argument("--patch-file", type=Path, required=True)
+    approval_ui.add_argument("--investigation-id", required=True)
+    approval_ui.add_argument("--port", type=int, default=8765)
     args = parser.parse_args()
     try:
 
+        if args.command == "approval-ui":
+            from .approval_ui import serve_approval
+            serve_approval(Context.load(args.session), args.patch_file, args.investigation_id, args.port)
+            return 0
         if args.command == "tool-schemas":
             from .agents.schemas import CATALOG
             print(json.dumps(CATALOG, indent=2))

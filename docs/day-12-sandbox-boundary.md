@@ -127,3 +127,9 @@ Verified local commits now require a distinct target-commit approval record. It 
 Verification: 8 focused approval, executor, and target-commit tests passed.
 
 Full verification after target commit approval: 138 passed, 4 skipped.
+
+## MCP gateway
+
+The MCP gateway is a connectivity boundary below the Investigator and Auditor. It permits only read-only git, runtime, and database families, returns structured results, and denies arbitrary tools.
+
+Verification: 3 focused MCP gateway tests passed.

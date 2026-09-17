@@ -123,3 +123,7 @@ Latest full verification: 138 passed, 4 skipped.
 ## Target commit approval
 
 Local target branch commits require a separate persisted approval bound to target repository, sandbox session, exact action hash, branch, patch, commit message, and FIX_VERIFIED status. The approval is consumed after the commit succeeds. Focused verification: 8 passed.
+
+## MCP gateway
+
+TraceRoot now has a read-only MCP gateway for Git, runtime, and database tool families. It preserves structured results, separates transport failure from tool failure, and denies arbitrary tool families. Focused verification: 3 passed.

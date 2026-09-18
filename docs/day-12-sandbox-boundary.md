@@ -153,3 +153,11 @@ Live workspace verification: loopback incident API returned a valid empty report
 The workspace supports loopback WebSocket operator messages and checkpoint requests. Messages are broadcast to dashboard clients. A message does not create a run, and an interrupt request does not claim to stop an inactive graph.
 
 Verification: local WebSocket message delivery passed.
+
+## SSE investigation workspace
+
+The incident workspace was rebuilt as a three-panel operator console. It uses loopback SSE at `/api/events` for concise semantic events and POST endpoints for reports, messages, pause, and resume. It does not use WebSockets for the workspace.
+
+The event contract documents current events and graph-facing vocabulary without recording private model reasoning. Verification: `tests/test_workspace_ui.py` passed (1 test); live `/api/incidents` returned an empty list and `/api/events` emitted `workspace.ready`.
+
+Full regression verification after the SSE workspace update: 143 passed, 4 skipped.

@@ -141,3 +141,13 @@ Live workspace verification: loopback incident API responded successfully with a
 ## Live operator channel
 
 The incident workspace has a loopback WebSocket channel for operator messages and checkpoint requests. It broadcasts events to the dashboard and does not start or alter an inactive investigation. Verification: one local message delivery passed.
+
+## Incident workspace event stream
+
+The incident workspace now uses a three-panel investigation console: stages and agents, a live event stream, and evidence/state. It uses loopback Server-Sent Events for backend-to-browser semantic events and HTTP POST for incident reports, messages, pause, and resume requests. It never exposes private model reasoning.
+
+See [workspace event contract](docs/workspace-event-contract.md) and [local demo](docs/local-demo.md).
+
+Verification: workspace SSE persistence test passed; live loopback API returned an empty incident list and the `workspace.ready` SSE event.
+
+Full regression verification after the SSE workspace update: 143 passed, 4 skipped.

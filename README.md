@@ -159,3 +159,13 @@ Use `--workspace-dir .traceroot-workspace` with `investigate` or `resume` to pub
 Verification: workspace bridge plus LangGraph focused tests passed, 13 tests total.
 
 Full regression verification after the graph event bridge: 144 passed, 4 skipped.
+
+## Workspace interface consolidation
+
+The repository now has one UI asset root: `ui/`. The exact-patch approval page uses `ui/`; the incident operations console uses `ui/workspace/`. The console now has a stronger three-panel layout for stages and agents, live events, and evidence state.
+
+If port 8875 is already occupied, `workspace-ui` returns `workspace_port_unavailable` with an explicit message. Start the existing page at http://127.0.0.1:8875 or choose a different `--port`.
+
+Verification: workspace tests passed (2 tests). The consolidated server started on port 8875; a second startup returned the expected port-conflict status.
+
+Full regression verification after UI consolidation: 144 passed, 4 skipped.

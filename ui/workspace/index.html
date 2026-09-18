@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>TraceRoot · Incident Console</title>
+  <link rel="stylesheet" href="/workspace/styles.css">
+</head>
+<body>
+  <header class="appbar">
+    <a class="brand" href="/" aria-label="TraceRoot home"><span class="brand-mark">T</span><span>TraceRoot</span></a>
+    <div class="crumb"><span class="dot"></span><span id="run-name">New investigation</span><span class="slash">/</span><span>Incident console</span></div>
+    <div class="app-actions"><span class="run-status" id="run-status">READY</span><button class="quiet" id="pause" type="button">Pause</button><button class="primary" id="resume" type="button">Resume</button></div>
+  </header>
+  <div class="shell">
+    <aside class="rail">
+      <section>
+        <p class="eyebrow">INVESTIGATION</p>
+        <nav class="stages" aria-label="Investigation stages">
+          <a class="stage complete"><span>01</span>Reproduce<i>éÝyø§yÓ</i></a>
+          <a class="stage"><span>02</span>Runtime evidence</a>
+          <a class="stage active"><span>03</span>Investigate<i;§uçâçO</i></a>
+          <a class="stage"><span>04</span>Audit evidence</a>
+          <a class="stage"><span>05</span>Root cause</a>
+          <a class="stage locked"><span>06</span>Remediate<i;§uçâçA</i></a>
+          <a class="stage locked"><span>07</span>Verify<i>éÝyø§yÑ</i></a>
+        </nav>
+      </section>
+      <section class="agent-section">
+        <p class="eyebrow">AGENTS</p>
+        <div class="agent"><span class="avatar investigate">I</span><div><b>Investigator</b><small>Waiting for incident</small></div><em></em></div>
+        <div class="agent"><span class="avatar audit">A</span><div><b>Evidence Auditor</b><small>Independent review</small></div></div>
+        <div class="agent"><span class="avatar plan">P</span><div><b>Remediation Planner</b><small>Locked until RCA</small></div></div>
+      </section>
+      <section class="guardrail"><span;§uçâçA</span><p><b>Guardrails active</b>Read-only investigation. Approval required for every write.</p></section>
+    </aside>
+    <main class="main-panel">
+      <div class="main-heading">
+        <div><p class="eyebrow">LIVE ACTIVITY</p><h1>Investigation timeline</h1><p class="muted">Concise actions and observations. No private reasoning is stored.</p></div>
+        <span class="connection" id="connection"><i></i>Connecting</span>
+      </div>
+      <div class="incident-composer">
+        <div class="composer-title"><span class="spark">éÝyø§yÖ</span><div><b>Start with an incident</b><small>TraceRoot starts with the symptom, then gathers evidence.</small></div></div>
+        <form id="report">
+          <label><span>Repository</span><input name="repository" placeholder="/path/to/target repository" required></label>
+          <label><span>Incident report</span><textarea name="report" placeholder="What failed? Include the user-visible symptom." required></textarea></label>
+          <label><span>Reproduction command <em>optional</em></span><input name="reproduction_command" placeholder="pytest tests/test_incident.py -q"></label>
+          <button class="primary start" type="submit">Save incident <span;§uçâçR</span></button>
+        </form>
+      </div>
+      <div class="timeline-header"><span>EVENT STREAM</span><span>UTC · local loopback</span></div>
+      <div id="timeline" class="timeline">
+        <article class="event system"><div class="event-line"><span></span></div><time>NOW</time><div class="event-card"><div class="event-meta"><b>WORKSPACE READY</b><span>system</span></div><p>Add an incident to create an auditable starting point. Agent progress appears here when an investigation is connected.</p></div></article>
+      </div>
+      <form id="message" class="message-bar"><span;§uçâçz</span><input name="message" autocomplete="off" placeholder="Send a concise instruction to TraceRoovéÝyø§yÖ"><button type="submit">Send</button></form>
+    </main>
+    <aside class="inspect-panel">
+      <div class="inspect-heading"><div><p class="eyebrow">RUN CONTEXT</p><h2>Evidence state</h2></div><button class="icon-button" aria-label="More context options">5£b</button></div>
+      <section class="metric-row"><div><span>Tool calls</span><b>0<span>/15</span></b></div><div><span>Model calls</span><b>0<span>/30</span></b></div></section>
+      <section class="context-section"><div class="section-title"><h3>Hypotheses</h3><span class="count">0</span></div><div class="empty"><span class="empty-icon";§uçâçG</span><p>No active hypotheses</p><small>The Investigator will create evidence-linked hypotheses.</small></div></section>
+      <section class="context-section"><div class="section-title"><h3>Evidence</h3><span class="count">0</span></div><div class="empty"><span class="empty-icon">éÝyø§yÔ</span><p>No collected evidence</p><small>Tool results, logs, and test observations appear here.</small></div></section>
+      <section class="context-section"><div class="section-title"><h3>Safety posture</h3><span class="safe">READ ONLY</span></div><ul class="safety-list"><li><i;§uçâçS</i> Benchmark ground truth blocked</li><li><i;§uçâçS</i> No target writes</li><li><i>ºw^~)Þw</i> Docker required for patches</li></ul></section>
+      <footer class="inspect-footer"><span>TraceRoot run policy</span><button type="button">View details</button></footer>
+    </aside>
+  </div>
+  <script src="/workspace/app.js"></script>
+</body>
+</html>

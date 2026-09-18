@@ -115,7 +115,16 @@ def main():
     except ToolFailure as exc:
         print(json.dumps(ToolResult(exc.status, error=ToolError(exc.code, exc.message)).to_dict(), indent=2))
         return 2
-    except (OSError, ValueError):
+    except OSError as exc:
+        if args.command == "workspace-ui" and getattr(exc, "errno", None) == 98:
+            message = f"Workspace port {args.port} is already in use. Open the existing workspace or choose --port."
+            code = "workspace_port_unavailable"
+        else:
+            message = "Invalid input or unavailable session."
+            code = "operator_error"
+        print(json.dumps(ToolResult("error", error=ToolError(code, message)).to_dict()))
+        return 2
+    except ValueError:
         print(json.dumps(ToolResult("error", error=ToolError("operator_error", "Invalid input or unavailable session.")).to_dict()))
         return 2
 

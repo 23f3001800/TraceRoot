@@ -6,7 +6,7 @@ Start the incident workspace:
 PYTHONPATH=$PWD .venv/bin/python -m traceroot workspace-ui
 ```
 
-Open http://127.0.0.1:8875. The workspace is loopback-only.
+Open http://127.0.0.1:8875. The workspace is loopback-only. If that port is already in use, open the existing page or start with --port 8877.
 
 1. Enter a target repository path.
 2. Describe the incident.

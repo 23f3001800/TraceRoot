@@ -247,7 +247,7 @@ class WorkspaceAPI:
 
 def serve_workspace(root: Path, port: int = 8875) -> None:
     api = WorkspaceAPI(root)
-    ui_root = Path(__file__).parents[1] / "workspace_ui"
+    ui_root = Path(__file__).parents[1] / "ui" / "workspace"
     server = ThreadingHTTPServer(("127.0.0.1", port), api.handler(ui_root))
     print(
         f"TraceRoot workspace: http://127.0.0.1:{port} "

@@ -162,6 +162,9 @@ class WorkspaceAPI:
                     self.send_header("Connection", "keep-alive")
                     self.end_headers()
                     listener = api.store.subscribe()
+                    event_path = api.store.root / "events.jsonl"
+                    offset = event_path.stat().st_size if event_path.exists() else 0
+                    seen = set()
                     try:
                         initial = {
                             "type": "workspace.ready",
@@ -173,14 +176,22 @@ class WorkspaceAPI:
                         )
                         self.wfile.flush()
                         while True:
+                            events = []
                             try:
-                                event = listener.get(timeout=15)
-                                payload = (
-                                    f"event: trace\ndata: {json.dumps(event)}\n\n".encode("utf-8")
-                                )
+                                events.append(listener.get(timeout=1))
                             except queue.Empty:
-                                payload = b": keepalive\n\n"
-                            self.wfile.write(payload)
+                                pass
+                            if event_path.exists():
+                                with event_path.open("r", encoding="utf-8") as stream:
+                                    stream.seek(offset)
+                                    events.extend(json.loads(line) for line in stream if line.strip())
+                                    offset = stream.tell()
+                            for event in events:
+                                if event["id"] in seen:
+                                    continue
+                                seen.add(event["id"])
+                                payload = f"event: trace\ndata: {json.dumps(event)}\n\n".encode("utf-8")
+                                self.wfile.write(payload)
                             self.wfile.flush()
                     except (BrokenPipeError, ConnectionResetError):
                         pass

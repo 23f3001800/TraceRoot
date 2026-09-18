@@ -179,3 +179,13 @@ The UI is modular under `ui/workspace/`: HTML, three CSS layers, API transport, 
 Verification: workspace contract tests passed (2 tests); seven UI files passed an ASCII check; the live default page served the revised Incident input screen.
 
 Full regression verification after modular workspace update: 144 passed, 4 skipped.
+
+## Workspace form-reset correction
+
+Incident saving completed before the browser tried to reset the form through an expired async event reference. The handler now captures the form before awaiting the API result, then resets that saved reference.
+
+Verification: workspace UI and frontend regression tests passed, 3 tests total.
+
+Workspace layout simplified to one essential sidebar; live activity remains in the central investigation timeline.
+
+Full regression verification after workspace reliability update: 145 passed, 4 skipped.

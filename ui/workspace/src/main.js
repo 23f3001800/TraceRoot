@@ -5,20 +5,22 @@ const q = selector => document.querySelector(selector);
 q("#focus-intake").onclick = () => q("#intake").scrollIntoView({behavior:"smooth"});
 q("#report").onsubmit = async event => {
   event.preventDefault();
+  const form = event.currentTarget;
   try {
-    await post("/api/incidents", Object.fromEntries(new FormData(event.currentTarget)));
-    event.currentTarget.reset();
+    await post("/api/incidents", Object.fromEntries(new FormData(form)));
+    form.reset();
   } catch (error) {
     addEvent({type:"workspace.error", data:{message:error.message}});
   }
 };
 q("#message").onsubmit = async event => {
   event.preventDefault();
-  const input = event.currentTarget.message;
+  const form = event.currentTarget;
+  const input = form.elements.message;
   if (!input.value.trim()) return;
   try {
     await post("/api/messages", {message:input.value});
-    input.value = "";
+    form.reset();
   } catch (error) {
     addEvent({type:"workspace.error", data:{message:error.message}});
   }

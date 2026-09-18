@@ -30,3 +30,9 @@ All workspace source files use ASCII-only UI text and CSS shapes, avoiding encod
 ## Activity visibility
 
 SSE exposes concise events such as stage changes, agent starts, tool results, provider failures, and audit outcomes. The interface never displays private reasoning, sensitive prompts, or secrets.
+
+## Workspace form-reset correction
+
+Incident saving completed before the browser tried to reset the form through an expired async event reference. The handler now captures the form before awaiting the API result, then resets that saved reference.
+
+Verification: workspace UI and frontend regression tests passed, 3 tests total.

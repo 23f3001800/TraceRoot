@@ -131,3 +131,7 @@ TraceRoot now has a read-only MCP gateway for Git, runtime, and database tool fa
 ## Explicit MCP policy
 
 The enforced [MCP permission policy](docs/mcp-permission-policy.md) sets MCP_ACCESS_MODE to read_only. Git, runtime, and database evidence tools are allowed; write verbs are denied. Focused verification: 4 passed.
+
+## Incident workspace and demo
+
+Run `python -m traceroot workspace-ui` to open a loopback-only incident workspace. It saves reports locally without starting agents or changing targets. See [final benchmark](docs/final-benchmark.md) and [local demo](docs/local-demo.md). Workspace verification: 1 passed.

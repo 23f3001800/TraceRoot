@@ -26,3 +26,4 @@ Thumbs.db
 ui/.cache/
 docs/generated/
 docs/runs/
+.analysis/

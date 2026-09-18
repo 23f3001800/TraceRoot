@@ -42,12 +42,19 @@ def main():
     approval_ui.add_argument("--patch-file", type=Path, required=True)
     approval_ui.add_argument("--investigation-id", required=True)
     approval_ui.add_argument("--port", type=int, default=8765)
+    workspace_ui = commands.add_parser("workspace-ui", help="Serve the loopback-only incident reporting workspace")
+    workspace_ui.add_argument("--workspace-dir", type=Path, default=Path(".traceroot-workspace"))
+    workspace_ui.add_argument("--port", type=int, default=8875)
     args = parser.parse_args()
     try:
 
         if args.command == "approval-ui":
             from .approval_ui import serve_approval
             serve_approval(Context.load(args.session), args.patch_file, args.investigation_id, args.port)
+            return 0
+        if args.command == "workspace-ui":
+            from .workspace_ui import serve_workspace
+            serve_workspace(args.workspace_dir.resolve(), args.port)
             return 0
         if args.command == "tool-schemas":
             from .agents.schemas import CATALOG

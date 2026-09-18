@@ -139,3 +139,9 @@ Verification: 3 focused MCP gateway tests passed.
 MCP_ACCESS_MODE is now explicitly read_only in traceroot/mcp_policy.py. The gateway consults this policy for discovery and invocation, permitting only evidence-oriented git, runtime, and database operations.
 
 Verification: 4 focused MCP gateway and policy tests passed.
+
+## Incident reporting workspace
+
+The separate workspace_ui/ interface saves locally reported incidents through a loopback API and WebSocket. Reporting cannot start agents, run a reproduction, access a provider, or modify a target.
+
+Verification: workspace persistence test passed.

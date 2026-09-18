@@ -169,3 +169,13 @@ If port 8875 is already occupied, `workspace-ui` returns `workspace_port_unavail
 Verification: workspace tests passed (2 tests). The consolidated server started on port 8875; a second startup returned the expected port-conflict status.
 
 Full regression verification after UI consolidation: 144 passed, 4 skipped.
+
+## Modular incident workspace UI
+
+The incident console was redesigned as a simple, ASCII-safe workspace with explicit repository, incident, reproduction, and runtime inputs. It has a ChatGPT-style conversation center and coding-agent-style activity visibility.
+
+The UI is modular under `ui/workspace/`: HTML, three CSS layers, API transport, event rendering, and page control are separate files. See [workspace UI guide](docs/workspace-ui.md).
+
+Verification: workspace contract tests passed (2 tests); seven UI files passed an ASCII check; the live default page served the revised Incident input screen.
+
+Full regression verification after modular workspace update: 144 passed, 4 skipped.

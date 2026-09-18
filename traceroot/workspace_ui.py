@@ -47,7 +47,7 @@ class IncidentStore:
             self._listeners.discard(listener)
 
     def create(
-        self, repository: str, report: str, reproduction_command: str = ""
+        self, repository: str, report: str, reproduction_command: str = "", runtime: str = ""
     ) -> dict:
         if not isinstance(repository, str) or not repository.strip() or len(repository) > 1024:
             raise ValueError("repository")
@@ -55,12 +55,15 @@ class IncidentStore:
             raise ValueError("report")
         if not isinstance(reproduction_command, str) or len(reproduction_command) > 1000:
             raise ValueError("reproduction")
+        if not isinstance(runtime, str) or len(runtime) > 500:
+            raise ValueError("runtime")
 
         item = {
             "id": uuid4().hex[:12],
             "repository": repository.strip(),
             "report": report.strip(),
             "reproduction_command": reproduction_command.strip(),
+            "runtime": runtime.strip(),
             "status": "REPORTED",
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
@@ -209,6 +212,7 @@ class WorkspaceAPI:
                             (form.get("repository") or [""])[0],
                             (form.get("report") or [""])[0],
                             (form.get("reproduction_command") or [""])[0],
+                            (form.get("runtime") or [""])[0],
                         )
                     except ValueError:
                         return self.reply(

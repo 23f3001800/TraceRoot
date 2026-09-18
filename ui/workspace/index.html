@@ -3,66 +3,74 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TraceRoot · Incident Console</title>
-  <link rel="stylesheet" href="/workspace/styles.css">
+  <title>TraceRoot</title>
+  <link rel="stylesheet" href="/workspace/styles/base.css">
+  <link rel="stylesheet" href="/workspace/styles/layout.css">
+  <link rel="stylesheet" href="/workspace/styles/components.css">
 </head>
 <body>
-  <header class="appbar">
-    <a class="brand" href="/" aria-label="TraceRoot home"><span class="brand-mark">T</span><span>TraceRoot</span></a>
-    <div class="crumb"><span class="dot"></span><span id="run-name">New investigation</span><span class="slash">/</span><span>Incident console</span></div>
-    <div class="app-actions"><span class="run-status" id="run-status">READY</span><button class="quiet" id="pause" type="button">Pause</button><button class="primary" id="resume" type="button">Resume</button></div>
-  </header>
-  <div class="shell">
-    <aside class="rail">
-      <section>
-        <p class="eyebrow">INVESTIGATION</p>
-        <nav class="stages" aria-label="Investigation stages">
-          <a class="stage complete"><span>01</span>Reproduce<i>éÝyø§yÓ</i></a>
-          <a class="stage"><span>02</span>Runtime evidence</a>
-          <a class="stage active"><span>03</span>Investigate<i;§uçâçO</i></a>
-          <a class="stage"><span>04</span>Audit evidence</a>
-          <a class="stage"><span>05</span>Root cause</a>
-          <a class="stage locked"><span>06</span>Remediate<i;§uçâçA</i></a>
-          <a class="stage locked"><span>07</span>Verify<i>éÝyø§yÑ</i></a>
-        </nav>
-      </section>
-      <section class="agent-section">
-        <p class="eyebrow">AGENTS</p>
-        <div class="agent"><span class="avatar investigate">I</span><div><b>Investigator</b><small>Waiting for incident</small></div><em></em></div>
-        <div class="agent"><span class="avatar audit">A</span><div><b>Evidence Auditor</b><small>Independent review</small></div></div>
-        <div class="agent"><span class="avatar plan">P</span><div><b>Remediation Planner</b><small>Locked until RCA</small></div></div>
-      </section>
-      <section class="guardrail"><span;§uçâçA</span><p><b>Guardrails active</b>Read-only investigation. Approval required for every write.</p></section>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <header class="brand"><span class="brand-mark">T</span><span>TraceRoot</span></header>
+      <button class="new-incident" id="focus-intake" type="button"><span>+</span> New incident</button>
+      <nav class="navigation" aria-label="Workspace">
+        <a class="nav-item active" href="#activity"><span class="nav-icon activity-icon"></span> Investigation</a>
+        <a class="nav-item" href="#evidence"><span class="nav-icon evidence-icon"></span> Evidence</a>
+        <a class="nav-item" href="#history"><span class="nav-icon history-icon"></span> Run history</a>
+      </nav>
+      <div class="sidebar-section">
+        <p class="label">AGENT STATUS</p>
+        <div class="agent-row"><span class="agent-dot ready"></span><div><b>Investigator</b><small id="investigator-status">Waiting</small></div></div>
+        <div class="agent-row"><span class="agent-dot idle"></span><div><b>Evidence Auditor</b><small id="auditor-status">Waiting</small></div></div>
+        <div class="agent-row"><span class="agent-dot locked"></span><div><b>Remediation Planner</b><small>Locked until audit</small></div></div>
+      </div>
+      <div class="guardrail"><span class="lock-icon"></span><div><b>Safe investigation</b><small>Target access is read-only.</small></div></div>
+      <footer><span id="connection">Connecting</span><span class="connection-dot"></span></footer>
     </aside>
-    <main class="main-panel">
-      <div class="main-heading">
-        <div><p class="eyebrow">LIVE ACTIVITY</p><h1>Investigation timeline</h1><p class="muted">Concise actions and observations. No private reasoning is stored.</p></div>
-        <span class="connection" id="connection"><i></i>Connecting</span>
-      </div>
-      <div class="incident-composer">
-        <div class="composer-title"><span class="spark">éÝyø§yÖ</span><div><b>Start with an incident</b><small>TraceRoot starts with the symptom, then gathers evidence.</small></div></div>
+
+    <main class="conversation" id="activity">
+      <header class="conversation-header">
+        <div><p class="label">INCIDENT WORKSPACE</p><h1 id="run-name">Start an investigation</h1></div>
+        <div class="header-actions"><span class="badge" id="run-status">READY</span><button class="button secondary" id="pause" type="button">Pause</button><button class="button secondary" id="resume" type="button">Resume</button></div>
+      </header>
+
+      <section class="intro-message">
+        <div class="message-avatar system-avatar">T</div>
+        <div><b>TraceRoot</b><p>Describe the production symptom. I will reproduce it when possible, collect evidence, test competing hypotheses, and show every public action here.</p></div>
+      </section>
+
+      <section class="intake-card" id="intake">
+        <div class="card-heading"><div><h2>Incident input</h2><p>Provide only what is known. Empty optional fields remain unknown evidence.</p></div><span>Required fields marked *</span></div>
         <form id="report">
-          <label><span>Repository</span><input name="repository" placeholder="/path/to/target repository" required></label>
-          <label><span>Incident report</span><textarea name="report" placeholder="What failed? Include the user-visible symptom." required></textarea></label>
-          <label><span>Reproduction command <em>optional</em></span><input name="reproduction_command" placeholder="pytest tests/test_incident.py -q"></label>
-          <button class="primary start" type="submit">Save incident <span;§uçâçR</span></button>
+          <label>Repository path or URL *<input name="repository" autocomplete="off" placeholder="/workspaces/target-app" required></label>
+          <label>What happened? *<textarea name="report" placeholder="Some users receive a 500 error when creating an order." required></textarea></label>
+          <div class="input-grid">
+            <label>Reproduction command <span>optional</span><input name="reproduction_command" autocomplete="off" placeholder="pytest tests/test_orders.py -q"></label>
+            <label>Runtime or environment <span>optional</span><input name="runtime" autocomplete="off" placeholder="staging, Docker, local"></label>
+          </div>
+          <div class="form-footer"><p>Saving records the incident only. It does not run agents, tools, providers, or target changes.</p><button class="button primary" type="submit">Save incident</button></div>
         </form>
-      </div>
-      <div class="timeline-header"><span>EVENT STREAM</span><span>UTC · local loopback</span></div>
-      <div id="timeline" class="timeline">
-        <article class="event system"><div class="event-line"><span></span></div><time>NOW</time><div class="event-card"><div class="event-meta"><b>WORKSPACE READY</b><span>system</span></div><p>Add an incident to create an auditable starting point. Agent progress appears here when an investigation is connected.</p></div></article>
-      </div>
-      <form id="message" class="message-bar"><span;§uçâçz</span><input name="message" autocomplete="off" placeholder="Send a concise instruction to TraceRoovéÝyø§yÖ"><button type="submit">Send</button></form>
+      </section>
+
+      <div class="timeline-title"><span>LIVE ACTIVITY</span><span>Concise observations only</span></div>
+      <section class="timeline" id="timeline" aria-live="polite">
+        <article class="event event-system"><div class="event-marker"></div><div class="event-content"><div class="event-meta"><b>WORKSPACE READY</b><time>Now</time></div><p>When an investigation is connected, stages, tools, evidence, and audit results appear in this timeline.</p></div></article>
+      </section>
+
+      <form class="message-input" id="message">
+        <input name="message" autocomplete="off" placeholder="Send a concise instruction to TraceRoot during an active investigation">
+        <button type="submit" aria-label="Send message">Send</button>
+      </form>
     </main>
-    <aside class="inspect-panel">
-      <div class="inspect-heading"><div><p class="eyebrow">RUN CONTEXT</p><h2>Evidence state</h2></div><button class="icon-button" aria-label="More context options">5£b</button></div>
-      <section class="metric-row"><div><span>Tool calls</span><b>0<span>/15</span></b></div><div><span>Model calls</span><b>0<span>/30</span></b></div></section>
-      <section class="context-section"><div class="section-title"><h3>Hypotheses</h3><span class="count">0</span></div><div class="empty"><span class="empty-icon";§uçâçG</span><p>No active hypotheses</p><small>The Investigator will create evidence-linked hypotheses.</small></div></section>
-      <section class="context-section"><div class="section-title"><h3>Evidence</h3><span class="count">0</span></div><div class="empty"><span class="empty-icon">éÝyø§yÔ</span><p>No collected evidence</p><small>Tool results, logs, and test observations appear here.</small></div></section>
-      <section class="context-section"><div class="section-title"><h3>Safety posture</h3><span class="safe">READ ONLY</span></div><ul class="safety-list"><li><i;§uçâçS</i> Benchmark ground truth blocked</li><li><i;§uçâçS</i> No target writes</li><li><i>ºw^~)Þw</i> Docker required for patches</li></ul></section>
-      <footer class="inspect-footer"><span>TraceRoot run policy</span><button type="button">View details</button></footer>
+
+    <aside class="context-panel" id="evidence">
+      <section><p class="label">RUN CONTEXT</p><h2>What TraceRoot sees</h2></section>
+      <section class="context-card"><div class="context-title"><h3>Required inputs</h3></div><ul class="input-list"><li><i class="required"></i>Repository</li><li><i class="required"></i>Incident report</li><li><i class="optional"></i>Reproduction command</li><li><i class="optional"></i>Runtime context</li></ul></section>
+      <section class="context-card"><div class="context-title"><h3>Current stage</h3><span class="badge small">READY</span></div><ol class="stage-list"><li class="current">Reproduce reported symptom</li><li>Collect runtime evidence</li><li>Investigate hypotheses</li><li>Audit root-cause evidence</li></ol></section>
+      <section class="context-card"><div class="context-title"><h3>Evidence</h3><span class="counter" id="evidence-count">0</span></div><p class="empty-state">No evidence recorded yet.</p></section>
+      <section class="context-card"><div class="context-title"><h3>Guardrails</h3></div><ul class="check-list"><li>Read-only target access</li><li>Benchmark ground truth blocked</li><li>Approval required for writes</li></ul></section>
     </aside>
   </div>
-  <script src="/workspace/app.js"></script>
+  <script type="module" src="/workspace/src/main.js"></script>
 </body>
 </html>

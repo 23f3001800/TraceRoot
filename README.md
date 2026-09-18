@@ -127,3 +127,7 @@ Local target branch commits require a separate persisted approval bound to targe
 ## MCP gateway
 
 TraceRoot now has a read-only MCP gateway for Git, runtime, and database tool families. It preserves structured results, separates transport failure from tool failure, and denies arbitrary tool families. Focused verification: 3 passed.
+
+## Explicit MCP policy
+
+The enforced [MCP permission policy](docs/mcp-permission-policy.md) sets MCP_ACCESS_MODE to read_only. Git, runtime, and database evidence tools are allowed; write verbs are denied. Focused verification: 4 passed.

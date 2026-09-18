@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol, Any
 from .contracts import ToolError, ToolResult
+from .mcp_policy import is_read_only_tool
 
 @dataclass(frozen=True)
 class MCPTool:
@@ -15,8 +16,6 @@ class MCPClient(Protocol):
     def list_tools(self) -> list[MCPTool]: ...
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]: ...
 
-_ALLOWED_FAMILIES = {"git", "runtime", "database"}
-
 class MCPGateway:
     def __init__(self, clients: dict[str, MCPClient]):
         self.clients = dict(clients)
@@ -25,15 +24,14 @@ class MCPGateway:
         tools = []
         for server, client in sorted(self.clients.items()):
             for tool in client.list_tools():
-                family = tool.name.split(".", 1)[0]
-                if family in _ALLOWED_FAMILIES:
+                if is_read_only_tool(tool.name):
                     tools.append({"server": server, "name": tool.name,
                                   "description": tool.description, "input_schema": tool.input_schema,
                                   "permission": "read"})
         return tools
 
     def invoke(self, server: str, name: str, arguments: dict[str, Any]) -> ToolResult:
-        if server not in self.clients or name.split(".", 1)[0] not in _ALLOWED_FAMILIES:
+        if server not in self.clients or not is_read_only_tool(name):
             return ToolResult("rejected", error=ToolError("mcp_tool_denied", "MCP tool is not permitted."))
         if not isinstance(arguments, dict):
             return ToolResult("rejected", error=ToolError("invalid_input", "MCP arguments must be an object."))

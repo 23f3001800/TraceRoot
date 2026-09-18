@@ -133,3 +133,9 @@ Full verification after target commit approval: 138 passed, 4 skipped.
 The MCP gateway is a connectivity boundary below the Investigator and Auditor. It permits only read-only git, runtime, and database families, returns structured results, and denies arbitrary tools.
 
 Verification: 3 focused MCP gateway tests passed.
+
+## Explicit MCP policy
+
+MCP_ACCESS_MODE is now explicitly read_only in traceroot/mcp_policy.py. The gateway consults this policy for discovery and invocation, permitting only evidence-oriented git, runtime, and database operations.
+
+Verification: 4 focused MCP gateway and policy tests passed.

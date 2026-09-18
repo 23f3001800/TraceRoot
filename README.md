@@ -151,3 +151,11 @@ See [workspace event contract](docs/workspace-event-contract.md) and [local demo
 Verification: workspace SSE persistence test passed; live loopback API returned an empty incident list and the `workspace.ready` SSE event.
 
 Full regression verification after the SSE workspace update: 143 passed, 4 skipped.
+
+## Live graph event bridge
+
+Use `--workspace-dir .traceroot-workspace` with `investigate` or `resume` to publish bounded LangGraph progress into the local SSE timeline. The bridge translates graph transitions, tool events, and provider failures into concise public event types; it does not pass prompts, tool arguments, secrets, or private reasoning.
+
+Verification: workspace bridge plus LangGraph focused tests passed, 13 tests total.
+
+Full regression verification after the graph event bridge: 144 passed, 4 skipped.

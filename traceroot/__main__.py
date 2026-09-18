@@ -31,11 +31,13 @@ def main():
     investigator.add_argument("--max-seconds", type=int, default=300)
     investigator.add_argument("--model-timeout", type=int, default=60)
     investigator.add_argument("--max-model-calls", type=int, default=30)
+    investigator.add_argument("--workspace-dir", type=Path, help="Publish bounded graph events to the loopback workspace.")
     resume = commands.add_parser("resume", help="Resume a checkpoint with its original cumulative budgets")
     resume.add_argument("--session", type=Path, required=True)
     resume.add_argument("--run-id", required=True)
     resume.add_argument("--env-file", type=Path, default=Path(".env"))
     resume.add_argument("--retry-invalid", action="store_true", help="Retry a finished invalid-decision checkpoint after a contract update.")
+    resume.add_argument("--workspace-dir", type=Path, help="Publish bounded graph events to the loopback workspace.")
     commands.add_parser("tool-schemas", help="Print the six model-facing tool contracts")
     approval_ui = commands.add_parser("approval-ui", help="Serve a loopback-only exact-patch approval page")
     approval_ui.add_argument("--session", type=Path, required=True)
@@ -67,11 +69,21 @@ def main():
             from .llms.provider import ModelFailure, load_provider
             try:
                 provider = load_provider(args.env_file, LLMConfig())
+                workspace_progress = None
+                if args.workspace_dir:
+                    from .workspace_ui import WorkspaceProgress
+                    workspace_progress = WorkspaceProgress(args.workspace_dir.resolve())
+
+                def progress(event):
+                    print(json.dumps(event), file=sys.stderr, flush=True)
+                    if workspace_progress:
+                        workspace_progress(event)
+
                 result = investigate_graph(
                     Context.load(args.session),
                     json.loads(args.task_file.read_text()) if args.command == "investigate" else None, provider,
                     Budget(args.max_tool_calls, args.max_seconds, args.model_timeout, args.max_model_calls) if args.command == "investigate" else Budget(),
-                    progress=lambda event: print(json.dumps(event), file=sys.stderr, flush=True),
+                    progress=progress,
                     resume_run_id=args.run_id if args.command == "resume" else None,
                     retry_invalid=args.retry_invalid if args.command == "resume" else False,
                 )

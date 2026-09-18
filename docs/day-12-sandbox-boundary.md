@@ -161,3 +161,11 @@ The incident workspace was rebuilt as a three-panel operator console. It uses lo
 The event contract documents current events and graph-facing vocabulary without recording private model reasoning. Verification: `tests/test_workspace_ui.py` passed (1 test); live `/api/incidents` returned an empty list and `/api/events` emitted `workspace.ready`.
 
 Full regression verification after the SSE workspace update: 143 passed, 4 skipped.
+
+## Live graph event bridge
+
+Use `--workspace-dir .traceroot-workspace` with `investigate` or `resume` to publish bounded LangGraph progress into the local SSE timeline. The bridge translates graph transitions, tool events, and provider failures into concise public event types; it does not pass prompts, tool arguments, secrets, or private reasoning.
+
+Verification: workspace bridge plus LangGraph focused tests passed, 13 tests total.
+
+Full regression verification after the graph event bridge: 144 passed, 4 skipped.

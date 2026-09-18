@@ -86,6 +86,45 @@ class IncidentStore:
         return self._emit(kind, {"message": message.strip(), "active_run": None})
 
 
+class WorkspaceProgress:
+    """Translate bounded graph progress into public dashboard events."""
+
+    _NODES = {
+        "reproduce": ("stage.changed", "Reproduction"),
+        "collect_runtime_evidence": ("stage.changed", "Runtime evidence"),
+        "investigate": ("agent.started", "Investigator"),
+        "investigate_missing_evidence": ("agent.started", "Investigator"),
+        "evidence_auditor": ("agent.started", "Evidence Auditor"),
+        "root_cause_report": ("stage.changed", "Root cause report"),
+        "report_limitation": ("stage.changed", "Report limitation"),
+        "finalize": ("run.completed", "Finalizing report"),
+    }
+
+    def __init__(self, root: Path):
+        self.store = IncidentStore(root)
+
+    def __call__(self, progress: dict) -> None:
+        name = progress.get("event")
+        data = {
+            key: value
+            for key, value in progress.items()
+            if key in {"run_id", "step", "tool", "status", "code", "node"}
+            and isinstance(value, (str, int, float, bool))
+        }
+        if name == "graph_transition":
+            event_type, label = self._NODES.get(
+                str(progress.get("node")), ("stage.changed", "Investigation")
+            )
+            data["label"] = label
+        elif name == "provider_failure":
+            event_type = "provider.error"
+        elif name in {"tool_selected", "tool_result"}:
+            event_type = "tool.started" if name == "tool_selected" else "tool.completed"
+        else:
+            event_type = "agent.message"
+        self.store._emit(event_type, data)
+
+
 class WorkspaceAPI:
     def __init__(self, root: Path):
         self.store = IncidentStore(root)

@@ -26,3 +26,12 @@ PYTHONPATH=$PWD .venv/bin/python -m traceroot approval-ui --session SESSION --pa
 ```
 
 The approval interface remains separate from the incident workspace.
+
+To display progress from a CLI investigation in the workspace, use the same local workspace directory:
+
+```bash
+PYTHONPATH=$PWD .venv/bin/python -m traceroot investigate \
+  --session SESSION --task-file task.json --workspace-dir .traceroot-workspace
+```
+
+This publishes only bounded graph transitions, tool status, and provider failures. It does not make the workspace responsible for launching an investigation.

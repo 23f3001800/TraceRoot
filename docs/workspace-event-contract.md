@@ -24,3 +24,9 @@ When the incident controller is connected, it will emit these concise state even
 - `provider.error`
 
 Each event includes an ID, UTC timestamp, type, and bounded public data. Events may describe an action, observation, result, or required user decision; they must never include hidden reasoning, secrets, or full sensitive prompts.
+
+## Live graph event bridge
+
+Use `--workspace-dir .traceroot-workspace` with `investigate` or `resume` to publish bounded LangGraph progress into the local SSE timeline. The bridge translates graph transitions, tool events, and provider failures into concise public event types; it does not pass prompts, tool arguments, secrets, or private reasoning.
+
+Verification: workspace bridge plus LangGraph focused tests passed, 13 tests total.

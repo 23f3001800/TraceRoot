@@ -147,3 +147,9 @@ The separate workspace_ui/ interface saves locally reported incidents through a 
 Verification: workspace persistence test passed.
 
 Live workspace verification: loopback incident API returned a valid empty report list.
+
+## Workspace operator WebSocket
+
+The workspace supports loopback WebSocket operator messages and checkpoint requests. Messages are broadcast to dashboard clients. A message does not create a run, and an interrupt request does not claim to stop an inactive graph.
+
+Verification: local WebSocket message delivery passed.

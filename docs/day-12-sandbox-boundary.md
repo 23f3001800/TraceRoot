@@ -145,3 +145,5 @@ Verification: 4 focused MCP gateway and policy tests passed.
 The separate workspace_ui/ interface saves locally reported incidents through a loopback API and WebSocket. Reporting cannot start agents, run a reproduction, access a provider, or modify a target.
 
 Verification: workspace persistence test passed.
+
+Live workspace verification: loopback incident API returned a valid empty report list.

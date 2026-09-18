@@ -135,3 +135,5 @@ The enforced [MCP permission policy](docs/mcp-permission-policy.md) sets MCP_ACC
 ## Incident workspace and demo
 
 Run `python -m traceroot workspace-ui` to open a loopback-only incident workspace. It saves reports locally without starting agents or changing targets. See [final benchmark](docs/final-benchmark.md) and [local demo](docs/local-demo.md). Workspace verification: 1 passed.
+
+Live workspace verification: loopback incident API responded successfully with an empty local report list.

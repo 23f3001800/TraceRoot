@@ -27,3 +27,4 @@ ui/.cache/
 docs/generated/
 docs/runs/
 .analysis/
+.traceroot-workspace/

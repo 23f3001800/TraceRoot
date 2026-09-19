@@ -7,7 +7,9 @@ q("#report").onsubmit = async event => {
   event.preventDefault();
   const form = event.currentTarget;
   try {
-    await post("/api/incidents", Object.fromEntries(new FormData(form)));
+    const action = event.submitter && event.submitter.dataset.action;
+    const result = await post(action === "start" ? "/api/runs" : "/api/incidents", Object.fromEntries(new FormData(form)));
+    if (action === "start") document.querySelector("#run-status").textContent = "STARTING";
     form.reset();
   } catch (error) {
     addEvent({type:"workspace.error", data:{message:error.message}});
@@ -27,4 +29,5 @@ q("#message").onsubmit = async event => {
 };
 q("#pause").onclick = () => post("/api/pause").catch(error => addEvent({type:"workspace.error", data:{message:error.message}}));
 q("#resume").onclick = () => post("/api/resume").catch(error => addEvent({type:"workspace.error", data:{message:error.message}}));
+q("#stop").onclick = () => post("/api/stop").catch(error => addEvent({type:"workspace.error", data:{message:error.message}}));
 connectEvents(addEvent, setConnection);

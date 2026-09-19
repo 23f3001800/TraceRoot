@@ -4,6 +4,8 @@ from __future__ import annotations
 import json
 import queue
 import threading
+import subprocess
+import sys
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -12,6 +14,7 @@ from uuid import uuid4
 
 from .agents.state import atomic_json
 
+from .workspace_control import ActiveRuns
 
 class IncidentStore:
     """Durable local reports and a fan-out stream of concise public events."""
@@ -131,9 +134,73 @@ class WorkspaceProgress:
 class WorkspaceAPI:
     def __init__(self, root: Path):
         self.store = IncidentStore(root)
+        self.sessions = Path(".traceroot-runs").resolve()
+        self.active_runs = ActiveRuns(root)
 
     def payload(self) -> dict:
         return {"type": "incidents", "items": self.store.list()}
+
+    def start_investigation(self, repository: str, report: str, reproduction: str, runtime: str) -> dict:
+        source = Path(repository).expanduser()
+        if not source.is_dir():
+            raise ValueError("repository")
+        item = self.store.create(str(source), report, reproduction, runtime)
+        self.store._emit("run.queued", {"incident_id": item["id"], "repository": str(source)})
+
+        def worker():
+            try:
+                from .docker_runtime import prepare
+                self.store._emit("session.preparing", {"incident_id": item["id"]})
+                context = prepare(source, self.sessions, "docker")
+                task = {
+                    "repository": context.repository.source,
+                    "bug_report": item["report"],
+                    "constraints": ["read-only investigation", "benchmark folder forbidden", "no code changes", "no database changes"],
+                }
+                if item["reproduction_command"]:
+                    task["reproduction_command"] = item["reproduction_command"]
+                task_path = self.store.root / f"task-{item['id']}.json"
+                atomic_json(task_path, task)
+                command = [sys.executable, "-m", "traceroot", "investigate", "--session", str(context.session_dir),
+                           "--task-file", str(task_path), "--workspace-dir", str(self.store.root)]
+                log_path = self.store.root / f"run-{item['id']}.log"
+                self.store._emit("session.ready", {"incident_id": item["id"], "session": context.config["id"]})
+                with log_path.open("wb") as log:
+                    process = subprocess.Popen(command, cwd=Path(__file__).parents[1], stdout=log, stderr=subprocess.STDOUT)
+                record = self.active_runs.register(item["id"], process, context.session_dir, command)
+                self.store._emit("run.started", {"incident_id": item["id"], "session": context.config["id"], "pid": record["pid"]})
+                returncode = process.wait()
+                self.active_runs.finished(item["id"], returncode)
+                self.store._emit("run.completed" if returncode == 0 else "run.failed", {"incident_id": item["id"], "returncode": returncode})
+            except Exception as exc:
+                self.store._emit("run.failed", {"incident_id": item["id"], "message": str(exc)[:240]})
+        threading.Thread(target=worker, daemon=True).start()
+        return item
+
+
+    def resume_investigation(self, message: str = "", incident_id: str = "") -> dict:
+        control = self.active_runs.control("resume", message, incident_id)
+        run = self.active_runs._record(control["incident_id"])
+        session = Path(run["session"])
+        states = sorted((session / "agent-runs").glob("*/state.json"), key=lambda path: path.stat().st_mtime)
+        if not states:
+            raise ValueError("checkpoint")
+        run_id = states[-1].parent.name
+        command = [sys.executable, "-m", "traceroot", "resume", "--session", str(session), "--run-id", run_id, "--workspace-dir", str(self.store.root)]
+        log_path = self.store.root / f"run-{control['incident_id']}.log"
+        with log_path.open("ab") as log:
+            process = subprocess.Popen(command, cwd=Path(__file__).parents[1], stdout=log, stderr=subprocess.STDOUT)
+        record = self.active_runs.register(control["incident_id"], process, session, command)
+        return self.store._emit("run.resumed", {"incident_id": control["incident_id"], "run_id": run_id, "pid": record["pid"]})
+
+    def operator_action(self, action: str, message: str = "", incident_id: str = "") -> dict:
+        if not isinstance(message, str) or len(message) > 2000:
+            raise ValueError("message")
+        if action == "resume":
+            return self.resume_investigation(message.strip(), incident_id)
+        control = self.active_runs.control(action, message.strip(), incident_id)
+        event_type = {"message": "run.message", "pause": "run.pause_requested", "resume": "run.resume_requested", "stop": "run.stop_requested"}[action]
+        return self.store._emit(event_type, control)
 
     def handler(self, ui_root: Path):
         api = self
@@ -234,16 +301,28 @@ class WorkspaceAPI:
                     return self.reply(
                         201, json.dumps({"item": item}).encode("utf-8"), "application/json"
                     )
+                if self.path == "/api/runs":
+                    try:
+                        item = api.start_investigation(
+                            (form.get("repository") or [""])[0],
+                            (form.get("report") or [""])[0],
+                            (form.get("reproduction_command") or [""])[0],
+                            (form.get("runtime") or [""])[0],
+                        )
+                    except ValueError:
+                        return self.reply(400, b'{"message":"Use a local target repository directory and incident report."}', "application/json")
+                    return self.reply(202, json.dumps({"item": item}).encode("utf-8"), "application/json")
 
                 routes = {
-                    "/api/messages": "run.message",
-                    "/api/pause": "run.pause_requested",
-                    "/api/resume": "run.resume_requested",
+                    "/api/messages": "message",
+                    "/api/pause": "pause",
+                    "/api/resume": "resume",
+                    "/api/stop": "stop",
                 }
                 if self.path in routes:
                     try:
-                        event = api.store.action(
-                            routes[self.path], (form.get("message") or [""])[0]
+                        event = api.operator_action(
+                            routes[self.path], (form.get("message") or [""])[0], (form.get("incident_id") or [""])[0]
                         )
                     except ValueError:
                         return self.reply(

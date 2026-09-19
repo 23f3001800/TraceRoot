@@ -31,7 +31,7 @@
     <main class="conversation" id="activity">
       <header class="conversation-header">
         <div><p class="label">INCIDENT WORKSPACE</p><h1 id="run-name">Start an investigation</h1></div>
-        <div class="header-actions"><span class="badge" id="run-status">READY</span><button class="button secondary" id="pause" type="button">Pause</button><button class="button secondary" id="resume" type="button">Resume</button></div>
+        <div class="header-actions"><span class="badge" id="run-status">READY</span><button class="button secondary" id="pause" type="button">Pause</button><button class="button secondary" id="resume" type="button">Resume</button><button class="button secondary" id="stop" type="button">Stop</button></div>
       </header>
 
       <section class="intro-message">
@@ -48,7 +48,7 @@
             <label>Reproduction command <span>optional</span><input name="reproduction_command" autocomplete="off" placeholder="pytest tests/test_orders.py -q"></label>
             <label>Runtime or environment <span>optional</span><input name="runtime" autocomplete="off" placeholder="staging, Docker, local"></label>
           </div>
-          <div class="form-footer"><p>Saving records the incident only. It does not run agents, tools, providers, or target changes.</p><button class="button primary" type="submit">Save incident</button></div>
+          <div class="form-footer"><p>Saving records the incident only. It does not run agents, tools, providers, or target changes.</p><button class="button secondary" type="submit" data-action="save">Save incident</button><button class="button primary" type="submit" data-action="start">Start investigation</button></div>
         </form>
       </section>
 

@@ -206,6 +206,19 @@ def build_graph(runtime: GraphRuntime):
     graph = StateGraph(InvestigationState)
 
     def check_budget(state: InvestigationState):
+        control_path = runtime.context.session_dir / "operator-control.json"
+        if control_path.is_file():
+            try:
+                control = json.loads(control_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                control = {}
+            if control.get("state") == "PAUSE_REQUESTED":
+                state["phase"] = "paused"
+                state["stopping_reason"] = "operator_pause_requested"
+                state["graph_next"] = "paused"
+                runtime.state = state
+                runtime.checkpoint("paused", "PAUSED")
+                return state
         runtime.state = state
         if state.get("final"):
             state["graph_next"] = "finalize"
@@ -443,17 +456,23 @@ def build_graph(runtime: GraphRuntime):
     graph.add_node("execute_tool", execute_tool)
     graph.add_node("evidence_auditor", evidence_auditor)
     graph.add_node("investigate_missing_evidence", investigate_missing_evidence)
+    def paused(state: InvestigationState):
+        runtime.state = state
+        return state
+
     graph.add_node("recovery", recovery)
     graph.add_node("report_limitation", report_limitation)
     graph.add_node("root_cause_report", root_cause_report)
     graph.add_node("finalize", finalize)
-    routes = {name: name for name in ["reproduce", "collect_runtime_evidence", "investigate", "execute_tool",
+    graph.add_node("paused", paused)
+    routes = {name: name for name in ["reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "paused",
         "evidence_auditor", "investigate_missing_evidence", "recovery", "report_limitation", "root_cause_report", "finalize"]}
     graph.add_conditional_edges(START, lambda state: state.get("graph_next") or "reproduce", routes)
     for name in ["check_budget", "reproduce", "collect_runtime_evidence", "investigate", "execute_tool", "evidence_auditor", "investigate_missing_evidence", "recovery", "report_limitation", "root_cause_report"]:
         graph.add_edge(name, "check_budget") if name != "check_budget" else None
     graph.add_conditional_edges("check_budget", lambda state: state.get("graph_next") or "report_limitation", routes)
     graph.add_edge("finalize", END)
+    graph.add_edge("paused", END)
     return graph.compile()
 
 

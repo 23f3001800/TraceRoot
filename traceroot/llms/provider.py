@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 import re
 from pathlib import Path
 from dataclasses import dataclass, replace
@@ -191,8 +192,12 @@ class AzureFoundryProvider:
             payload["response_format"] = {"type": "json_schema", "json_schema": {
                 "name": "traceroot_decision", "strict": False, "schema": generation_schema(schema)}}
         try:
-            response = httpx.post(url, headers={"api-key": self.api_key, "Content-Type": "application/json"},
-                params=params, json=payload, timeout=max(1, timeout))
+            headers = {"Content-Type": "application/json"}
+            if self.api_key.startswith("Bearer "):
+                headers["Authorization"] = self.api_key
+            else:
+                headers["api-key"] = self.api_key
+            response = httpx.post(url, headers=headers, params=params, json=payload, timeout=max(1, timeout))
             response.raise_for_status()
         except (httpx.TimeoutException, TimeoutError):
             raise ModelFailure("model_timeout", "Azure Foundry request timed out.", True) from None
@@ -238,11 +243,18 @@ def load_provider(env_file: Path | None, config: LLMConfig):
     azure_key = _env_value("AZURE_FOUNDRY_API_KEY", env_file) or _env_value("AZURE_AI_FOUNDRY_API_KEY", env_file)
     azure_endpoint = _env_value("AZURE_FOUNDRY_ENDPOINT", env_file) or _env_value("AZURE_AI_FOUNDRY_ENDPOINT", env_file)
     azure_model = _env_value("AZURE_FOUNDRY_MODEL", env_file) or _env_value("AZURE_AI_FOUNDRY_MODEL", env_file)
+    if not azure_key and azure_endpoint and azure_model and _env_value("AZURE_FOUNDRY_AUTH", env_file).casefold() == "azure_cli":
+        try:
+            azure_key = "Bearer " + subprocess.run(["az", "account", "get-access-token", "--resource", "https://cognitiveservices.azure.com/", "--query", "accessToken", "--output", "tsv"], capture_output=True, text=True, timeout=10, check=True).stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            raise ModelFailure("credential_missing", "Azure CLI login is required for Azure AI authentication.") from None
+        if azure_key == "Bearer ":
+            raise ModelFailure("credential_missing", "Azure CLI returned no Azure AI access token.")
     azure = AzureFoundryProvider(config, azure_key, azure_endpoint, azure_model,
         _env_value("AZURE_FOUNDRY_API_VERSION", env_file) or "2024-05-01-preview") if azure_key and azure_endpoint and azure_model else None
     if selected == "azure":
         if not azure:
-            raise ModelFailure("credential_missing", "Configure AZURE_FOUNDRY_ENDPOINT, AZURE_FOUNDRY_API_KEY, and AZURE_FOUNDRY_MODEL.")
+            raise ModelFailure("credential_missing", "Configure endpoint/model plus AZURE_FOUNDRY_AUTH=azure_cli, or an API key.")
         return azure
     router_key = _env_value("OPENROUTER_API_KEY", env_file)
     router = OpenRouterProvider(config, router_key, _env_value("OPENROUTER_MODEL", env_file) or "google/gemini-2.5-flash",

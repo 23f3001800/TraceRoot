@@ -3,69 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>TraceRoot</title>
+  <title>TraceRoot — Incident Workspace</title>
   <link rel="stylesheet" href="/workspace/styles/base.css">
-  <link rel="stylesheet" href="/workspace/styles/layout.css">
-  <link rel="stylesheet" href="/workspace/styles/components.css">
   <link rel="stylesheet" href="/workspace/styles/console.css">
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <header class="brand"><span class="brand-mark">T</span><span>TraceRoot</span></header>
-      <button class="new-incident" id="focus-intake" type="button"><span>+</span> New incident</button>
-      <nav class="navigation" aria-label="Workspace">
-        <a class="nav-item active" href="#activity"><span class="nav-icon activity-icon"></span> Investigation</a>
-        <a class="nav-item" href="#evidence"><span class="nav-icon evidence-icon"></span> Evidence</a>
-        <a class="nav-item" href="#history"><span class="nav-icon history-icon"></span> Run history</a>
-      </nav>
-      <div class="sidebar-section">
-        <p class="label">AGENT STATUS</p>
-        <div class="agent-row"><span class="agent-dot ready"></span><div><b>Investigator</b><small id="investigator-status">Waiting</small></div></div>
-        <div class="agent-row"><span class="agent-dot idle"></span><div><b>Evidence Auditor</b><small id="auditor-status">Waiting</small></div></div>
-        <div class="agent-row"><span class="agent-dot locked"></span><div><b>Remediation Planner</b><small>Locked until audit</small></div></div>
-      </div>
-      <div class="guardrail"><span class="lock-icon"></span><div><b>Safe investigation</b><small>Target access is read-only.</small></div></div>
-      <footer><span id="connection">Connecting</span><span class="connection-dot"></span></footer>
-    </aside>
-
-    <main class="conversation" id="activity">
-      <header class="conversation-header">
-        <div><p class="label">INCIDENT WORKSPACE</p><h1 id="run-name">Start an investigation</h1></div>
-        <div class="header-actions"><span class="badge" id="run-status">READY</span><button class="button secondary" id="pause" type="button">Pause</button><button class="button secondary" id="resume" type="button">Resume</button><button class="button secondary" id="stop" type="button">Stop</button></div>
-      </header>
-
-      <section class="intro-message">
-        <div class="message-avatar system-avatar">T</div>
-        <div><b>TraceRoot</b><p>Describe the production symptom. I will reproduce it when possible, collect evidence, test competing hypotheses, and show every public action here.</p></div>
-      </section>
-
-      <section class="intake-card" id="intake">
-        <div class="card-heading"><div><h2>Incident input</h2><p>Provide only what is known. Empty optional fields remain unknown evidence.</p></div><span>Required fields marked *</span></div>
-        <form id="report">
-          <label>Repository path or URL *<input name="repository" autocomplete="off" placeholder="/workspaces/target-app" required></label>
-          <label>What happened? *<textarea name="report" placeholder="Some users receive a 500 error when creating an order." required></textarea></label>
-          <div class="input-grid">
-            <label>Reproduction command <span>optional</span><input name="reproduction_command" autocomplete="off" placeholder="pytest tests/test_orders.py -q"></label>
-            <label>Runtime or environment <span>optional</span><input name="runtime" autocomplete="off" placeholder="staging, Docker, local"></label>
-          </div>
-          <div class="form-footer"><p>Saving records the incident only. It does not run agents, tools, providers, or target changes.</p><button class="button secondary" type="submit" data-action="save">Save incident</button><button class="button primary" type="submit" data-action="start">Start investigation</button></div>
-        </form>
-      </section>
-
-      <div class="timeline-title"><span>LIVE ACTIVITY</span><span>Concise observations only</span></div>
-      <section class="timeline" id="timeline" aria-live="polite">
-        <article class="event event-system"><div class="event-marker"></div><div class="event-content"><div class="event-meta"><b>WORKSPACE READY</b><time>Now</time></div><p>When an investigation is connected, stages, tools, evidence, and audit results appear in this timeline.</p></div></article>
-      </section>
-
-      <form class="message-input" id="message">
-        <input name="message" autocomplete="off" placeholder="Send a concise instruction to TraceRoot during an active investigation">
-        <button type="submit" aria-label="Send message">Send</button>
-      </form>
-    </main>
-
-  </div>
-  <script type="module" src="/workspace/src/main.js"></script>
+  <script type="module" src="/workspace/src/dashboard.js"></script>
 </body>
 </html>
-  <script type="module" src="/workspace/src/dashboard.js"></script>

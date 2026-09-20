@@ -134,7 +134,11 @@ def prepare(repository: Path, sessions: Path, docker_binary: str) -> Context:
             "--env", f"POSTGRES_PASSWORD={context.config['admin_password']}", "postgres:16",
         ], 120)
         for _ in range(40):
-            ready = docker(context, ["exec", context.config["db"], "pg_isready", "-U", "postgres", "-d", "investigation"])
+            # The official image runs a socket-only temporary server during first-boot
+            # initialization. TCP readiness waits for the final server, avoiding a race
+            # where pg_isready succeeds just before the temporary server shuts down.
+            ready = docker(context, ["exec", context.config["db"], "pg_isready", "-h", "127.0.0.1",
+                                     "-U", "postgres", "-d", "investigation"])
             if ready.exit_code == 0:
                 break
             time.sleep(0.25)

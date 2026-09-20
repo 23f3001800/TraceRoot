@@ -49,3 +49,23 @@ Code tools read only public app/tests Python files and approved test configurati
 Operator provisioning permits tests to write solely to disposable test state;
 this does not grant you database write operations or source modifications.
 """
+
+# The graph has a different decision envelope from the legacy investigator.
+# Never ask for decision_mode/AUDIT while validating action/FINAL.
+GRAPH_PROMPT = SYSTEM_PROMPT.split("Return one structured decision")[0] + """
+Return exactly the supplied graph decision schema:
+- action is TOOL_CALL, FINAL, or BLOCKED. Do not return decision_mode, AUDIT,
+  ready_for_evaluation, or a final_report field.
+- TOOL_CALL selects a registered tool and its exact arguments. Include a nonempty
+  evidence_goal and the hypothesis_id it tests (or null before hypotheses exist).
+- FINAL hands supported, cited hypotheses to the independent Evidence Auditor.
+  It does not write a final report. Set tool=null and arguments=null and include
+  a nonempty evidence_goal describing what the Auditor should verify.
+- BLOCKED sets tool=null and arguments=null. The nonempty evidence_goal states
+  which necessary evidence is unavailable.
+On every decision preserve the hypothesis registry and set reviewed_step to the
+latest supplied tool step. Evidence quotes must be exact substrings of the value
+at the cited JSON pointer. Do not paraphrase quotes or cite a different step.
+Keep hypothesis_summary and evidence_summary under 300 characters each.
+Return public decisions only, never private internal reasoning.
+"""

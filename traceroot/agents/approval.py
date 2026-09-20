@@ -36,6 +36,7 @@ def save_approval(context, record: ApprovalRecord) -> None:
     _valid_id(record.approval_id)
     path=approval_path(context,record.approval_id); path.parent.mkdir(mode=0o700,exist_ok=True); atomic_json(path,asdict(record))
 def load_approval(context, approval_id: str) -> ApprovalRecord:
+    _valid_id(approval_id)
     path=approval_path(context,approval_id)
     if not path.is_file(): raise ValueError("Unknown approval.")
     return ApprovalRecord(**json.loads(path.read_text()))
@@ -53,6 +54,7 @@ def save_target_commit_approval(context, record: TargetCommitApproval) -> None:
     _valid_id(record.approval_id)
     path=target_commit_approval_path(context,record.approval_id); path.parent.mkdir(mode=0o700,exist_ok=True); atomic_json(path,asdict(record))
 def load_target_commit_approval(context, approval_id: str) -> TargetCommitApproval:
+    _valid_id(approval_id)
     path=target_commit_approval_path(context,approval_id)
     if not path.is_file(): raise ValueError("Unknown target commit approval.")
     return TargetCommitApproval(**json.loads(path.read_text()))

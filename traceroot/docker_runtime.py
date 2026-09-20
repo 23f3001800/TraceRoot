@@ -168,8 +168,11 @@ ALTER ROLE inspection SET default_transaction_read_only = on;
         context.config["active"] = True
         context.save()
         return context
-    except Exception:
-        cleanup(context)
+    except BaseException:
+        try:
+            cleanup(context)
+        except (OSError, ToolFailure):
+            pass  # Preserve the provisioning/cancellation failure; cleanup is ownership-scoped.
         raise
 
 def require_active(context):

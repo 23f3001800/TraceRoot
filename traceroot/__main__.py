@@ -91,7 +91,7 @@ def main():
                 print(json.dumps({"status": "MODEL_PROVIDER_FAILURE", "error": {"code": exc.code, "message": exc.message}}))
                 return 2
             print(json.dumps(result, indent=2))
-            return 0 if result["final"]["status"] == "ROOT_CAUSE_SUPPORTED" else 1
+            return 0 if (result.get("final") or {}).get("status") == "ROOT_CAUSE_SUPPORTED" or result["summary"]["phase"] in {"paused", "stopped"} else 1
         if args.command == "prepare":
             ctx = prepare(args.repository, args.sessions.resolve(), args.docker)
             result = ToolResult("ok", {"session": str(ctx.session_dir), "repository": ctx.repository.source,

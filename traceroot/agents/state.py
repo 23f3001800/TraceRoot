@@ -12,7 +12,7 @@ from .schemas import obj, array, string, integer, nullable, HYPOTHESIS, FINAL_SC
 STATE_SCHEMA = obj({
     "version": {"const": 2}, "run_id": string(32), "session_id": string(100),
     "initial": {"type": "object"},
-    "phase": {"enum": ["running", "paused", "finished", "interrupted_tool"]}, "graph_next": string(100),
+    "phase": {"enum": ["running", "paused", "stopped", "finished", "interrupted_tool"]}, "graph_next": string(100),
     "steps": array({"type": "object"}, 15), "hypotheses": array(HYPOTHESIS, 8),
     "incident": {"type": "object"}, "reproduction": nullable({"type": "object"}),
     "observations": array({"type": "object"}, 15), "evidence": array({"type": "object"}, 120),
@@ -125,4 +125,3 @@ def session_lock(context):
             yield
         finally:
             fcntl.flock(stream, fcntl.LOCK_UN)
-

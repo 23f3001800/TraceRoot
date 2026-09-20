@@ -1,351 +1,279 @@
-"""Loopback incident workspace with semantic SSE events and explicit operator actions."""
-from __future__ import annotations
-
+"""Loopback HTTP actions and one replayable SSE stream for the full workspace."""
 import json
-import queue
-import threading
-import subprocess
-import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs
+import re
+import shlex
+import subprocess
+import sys
+import threading
+import time
+from urllib.parse import parse_qs, urlsplit
 from uuid import uuid4
 
 from .agents.state import atomic_json
-
+from .public_data import public
 from .workspace_control import ActiveRuns
-
-class IncidentStore:
-    """Durable local reports and a fan-out stream of concise public events."""
-
-    def __init__(self, root: Path):
-        self.root = root
-        self.root.mkdir(parents=True, exist_ok=True)
-        self._listeners: set[queue.Queue] = set()
-        self._lock = threading.Lock()
-
-    def _emit(self, event_type: str, data: dict) -> dict:
-        event = {
-            "id": uuid4().hex[:12],
-            "type": event_type,
-            "at": datetime.now(timezone.utc).isoformat(),
-            "data": data,
-        }
-        with self._lock:
-            with (self.root / "events.jsonl").open("a", encoding="utf-8") as stream:
-                stream.write(json.dumps(event) + "\n")
-            for listener in list(self._listeners):
-                listener.put(event)
-        return event
-
-    def subscribe(self) -> queue.Queue:
-        listener: queue.Queue = queue.Queue()
-        with self._lock:
-            self._listeners.add(listener)
-        return listener
-
-    def unsubscribe(self, listener: queue.Queue) -> None:
-        with self._lock:
-            self._listeners.discard(listener)
-
-    def create(
-        self, repository: str, report: str, reproduction_command: str = "", runtime: str = ""
-    ) -> dict:
-        if not isinstance(repository, str) or not repository.strip() or len(repository) > 1024:
-            raise ValueError("repository")
-        if not isinstance(report, str) or not report.strip() or len(report) > 4000:
-            raise ValueError("report")
-        if not isinstance(reproduction_command, str) or len(reproduction_command) > 1000:
-            raise ValueError("reproduction")
-        if not isinstance(runtime, str) or len(runtime) > 500:
-            raise ValueError("runtime")
-
-        item = {
-            "id": uuid4().hex[:12],
-            "repository": repository.strip(),
-            "report": report.strip(),
-            "reproduction_command": reproduction_command.strip(),
-            "runtime": runtime.strip(),
-            "status": "REPORTED",
-            "created_at": datetime.now(timezone.utc).isoformat(),
-        }
-        atomic_json(self.root / f"{item['id']}.json", item)
-        self._emit("incident.reported", {"incident": item})
-        return item
-
-    def list(self) -> list[dict]:
-        records = []
-        for path in self.root.glob("*.json"):
-            try:
-                records.append(json.loads(path.read_text(encoding="utf-8")))
-            except (OSError, ValueError):
-                continue
-        return sorted(records, key=lambda item: item["created_at"], reverse=True)
-
-    def action(self, kind: str, message: str = "") -> dict:
-        allowed = {"run.message", "run.pause_requested", "run.resume_requested"}
-        if kind not in allowed:
-            raise ValueError("action")
-        if not isinstance(message, str) or len(message) > 2000:
-            raise ValueError("message")
-        return self._emit(kind, {"message": message.strip(), "active_run": None})
-
-
-class WorkspaceProgress:
-    """Translate bounded graph progress into public dashboard events."""
-
-    _NODES = {
-        "reproduce": ("stage.changed", "Reproduction"),
-        "collect_runtime_evidence": ("stage.changed", "Runtime evidence"),
-        "investigate": ("agent.started", "Investigator"),
-        "investigate_missing_evidence": ("agent.started", "Investigator"),
-        "evidence_auditor": ("agent.started", "Evidence Auditor"),
-        "root_cause_report": ("stage.changed", "Root cause report"),
-        "report_limitation": ("stage.changed", "Report limitation"),
-        "finalize": ("run.completed", "Finalizing report"),
-    }
-
-    def __init__(self, root: Path):
-        self.store = IncidentStore(root)
-
-    def __call__(self, progress: dict) -> None:
-        name = progress.get("event")
-        data = {
-            key: value
-            for key, value in progress.items()
-            if key in {"run_id", "step", "tool", "status", "code", "node"}
-            and isinstance(value, (str, int, float, bool))
-        }
-        if name == "graph_transition":
-            event_type, label = self._NODES.get(
-                str(progress.get("node")), ("stage.changed", "Investigation")
-            )
-            data["label"] = label
-        elif name == "provider_failure":
-            event_type = "provider.error"
-        elif name in {"tool_selected", "tool_result"}:
-            event_type = "tool.started" if name == "tool_selected" else "tool.completed"
-        else:
-            event_type = "agent.message"
-        self.store._emit(event_type, data)
+from .workspace_events import IncidentStore, WorkspaceProgress, valid_id
+from .workspace_metrics import usage_metrics, validate_pricing
 
 
 class WorkspaceAPI:
-    def __init__(self, root: Path):
+    def __init__(self, root):
         self.store = IncidentStore(root)
-        self.sessions = Path(".traceroot-runs").resolve()
-        self.active_runs = ActiveRuns(root)
+        self.active_runs = ActiveRuns(self.store.root)
+        self._actions = threading.RLock()
 
-    def payload(self) -> dict:
-        return {"type": "incidents", "items": self.store.list()}
+    def payload(self):
+        return {"type": "incidents", "items": public(self.store.list())}
 
-    def start_investigation(self, repository: str, report: str, reproduction: str, runtime: str) -> dict:
-        source = Path(repository).expanduser()
-        if not source.is_dir():
-            raise ValueError("repository")
-        item = self.store.create(str(source), report, reproduction, runtime)
-        self.store._emit("run.queued", {"incident_id": item["id"], "repository": str(source)})
+    def detail(self, iid):
+        incident = self.store.get(iid)
+        try:
+            record = self.active_runs._record(iid)
+        except ValueError:
+            record = {}
+        if record.get("status") in {"RUNNING", "STARTING", "PAUSE_REQUESTED", "STOP_REQUESTED"} and not self.active_runs.alive(record):
+            record = self.active_runs.update(iid, status="INTERRUPTED")
+        # Never expose process commands, raw checkpoints, transcripts, or credentials.
+        fields = ("status", "session", "run_id", "summary", "final", "plan", "patch", "patch_hash",
+                  "files", "verification", "limitation", "error", "publication", "approval_id")
+        events = self.store.replay(investigation_id=iid)
+        return {"incident": public(incident), "run": public({k: record[k] for k in fields if k in record}),
+                "events": events, "metrics": usage_metrics(self.store.root, record, events)}
 
-        def worker():
+    def launch(self, iid, action):
+        with self._actions:
+            self.store.get(iid)
             try:
-                from .docker_runtime import prepare
-                self.store._emit("session.preparing", {"incident_id": item["id"]})
-                context = prepare(source, self.sessions, "docker")
-                task = {
-                    "repository": context.repository.source,
-                    "bug_report": item["report"],
-                    "constraints": ["read-only investigation", "benchmark folder forbidden", "no code changes", "no database changes"],
-                }
-                if item["reproduction_command"]:
-                    task["reproduction_command"] = item["reproduction_command"]
-                task_path = self.store.root / f"task-{item['id']}.json"
-                atomic_json(task_path, task)
-                command = [sys.executable, "-m", "traceroot", "investigate", "--session", str(context.session_dir),
-                           "--task-file", str(task_path), "--workspace-dir", str(self.store.root)]
-                log_path = self.store.root / f"run-{item['id']}.log"
-                self.store._emit("session.ready", {"incident_id": item["id"], "session": context.config["id"]})
-                with log_path.open("wb") as log:
+                record = self.active_runs._record(iid)
+            except ValueError:
+                record = {}
+            if record and self.active_runs.alive(record):
+                raise ValueError("An operation already owns this investigation.")
+            if action == "investigate" and record:
+                raise ValueError("This incident already has a run. Resume it or create a new incident.")
+            if action == "resume":
+                from .workspace_worker import checkpoint_path
+                if record.get("status") not in {"PAUSED", "INTERRUPTED"}:
+                    raise ValueError("Only a paused or interrupted investigation can resume.")
+                state = json.loads(checkpoint_path(record).read_text())
+                if state["phase"] == "stopped" or state.get("pending_action"):
+                    raise ValueError("An unfinished tool cannot be replayed automatically. Create a new incident.")
+                atomic_json(Path(record["session"]) / "operator-control.json", {"state": "RUNNING"})
+            if action == "plan" and (record.get("final") or {}).get("status") != "ROOT_CAUSE_SUPPORTED":
+                raise ValueError("Remediation requires an independently supported root cause.")
+            if action == "execute" and record.get("status") != "APPROVED":
+                raise ValueError("Execution requires exact-patch approval.")
+            command = [sys.executable, "-m", "traceroot.workspace_worker", "--root", str(self.store.root),
+                       "--incident", iid, "--action", action]
+            self.active_runs.update(iid, status="STARTING", operation=action)
+            self.store._emit("run.queued", {"action": action}, iid)
+            try:
+                with (self.store.root / f"run-{iid}.log").open("ab") as log:
                     process = subprocess.Popen(command, cwd=Path(__file__).parents[1], stdout=log, stderr=subprocess.STDOUT)
-                record = self.active_runs.register(item["id"], process, context.session_dir, command)
-                self.store._emit("run.started", {"incident_id": item["id"], "session": context.config["id"], "pid": record["pid"]})
-                returncode = process.wait()
-                self.active_runs.finished(item["id"], returncode)
-                self.store._emit("run.completed" if returncode == 0 else "run.failed", {"incident_id": item["id"], "returncode": returncode})
-            except Exception as exc:
-                self.store._emit("run.failed", {"incident_id": item["id"], "message": str(exc)[:240]})
-        threading.Thread(target=worker, daemon=True).start()
+                self.active_runs.register(iid, process, record.get("session"), command)
+            except OSError:
+                self.active_runs.update(iid, status="FAILED")
+                raise ValueError("Could not launch the investigation worker.") from None
+            def reap():
+                self.active_runs.finished(iid, process.wait())
+            threading.Thread(target=reap, daemon=True).start()
+            return {"incident_id": iid, "status": "QUEUED"}
+
+    def validate_input(self, repository, report, reproduction, runtime):
+        if len(report) > 1000:
+            raise ValueError("Incident descriptions support at most 1000 characters.")
+        if runtime:
+            raise ValueError("No deployed runtime is configured for this workspace yet.")
+        if not repository or (not repository.startswith("https://github.com/") and not Path(repository).expanduser().is_dir()):
+            raise ValueError("Provide an accessible local directory or HTTPS GitHub repository URL.")
+        if reproduction:
+            args = shlex.split(reproduction)
+            if not args or (args[0] != "pytest" and args[:3] != ["python", "-m", "pytest"]):
+                raise ValueError("Reproduction supports bounded pytest commands only.")
+
+    def start_investigation(self, repository, report, reproduction="", runtime="", incident_id=""):
+        self.validate_input(repository, report, reproduction, runtime)
+        item = self.store.get(incident_id) if incident_id else self.store.create(repository, report, reproduction, runtime)
+        self.launch(item["id"], "investigate")
         return item
 
-
-    def resume_investigation(self, message: str = "", incident_id: str = "") -> dict:
-        control = self.active_runs.control("resume", message, incident_id)
-        run = self.active_runs._record(control["incident_id"])
-        session = Path(run["session"])
-        states = sorted((session / "agent-runs").glob("*/state.json"), key=lambda path: path.stat().st_mtime)
-        if not states:
-            raise ValueError("checkpoint")
-        run_id = states[-1].parent.name
-        command = [sys.executable, "-m", "traceroot", "resume", "--session", str(session), "--run-id", run_id, "--workspace-dir", str(self.store.root)]
-        log_path = self.store.root / f"run-{control['incident_id']}.log"
-        with log_path.open("ab") as log:
-            process = subprocess.Popen(command, cwd=Path(__file__).parents[1], stdout=log, stderr=subprocess.STDOUT)
-        record = self.active_runs.register(control["incident_id"], process, session, command)
-        return self.store._emit("run.resumed", {"incident_id": control["incident_id"], "run_id": run_id, "pid": record["pid"]})
-
-    def operator_action(self, action: str, message: str = "", incident_id: str = "") -> dict:
-        if not isinstance(message, str) or len(message) > 2000:
-            raise ValueError("message")
+    def operator_action(self, action, message="", incident_id=""):
+        if not incident_id:
+            raise ValueError("Select an incident first.")
         if action == "resume":
-            return self.resume_investigation(message.strip(), incident_id)
-        control = self.active_runs.control(action, message.strip(), incident_id)
-        event_type = {"message": "run.message", "pause": "run.pause_requested", "resume": "run.resume_requested", "stop": "run.stop_requested"}[action]
-        return self.store._emit(event_type, control)
+            return self.launch(incident_id, "resume")
+        data = self.active_runs.control(action, message, incident_id)
+        event = "run.message" if action == "message" else "run." + action + "_requested"
+        if action == "stop" and self.active_runs._record(incident_id)["status"] == "STOPPED":
+            event = "run.stopped"
+        return self.store._emit(event, data, incident_id)
 
-    def handler(self, ui_root: Path):
+    def approval(self, iid, data, approve):
+        from .context import Context
+        from .agents.approval import ApprovalRecord, patch_hash, save_approval
+        with self._actions:
+            record = self.active_runs._record(iid)
+            if self.active_runs.alive(record):
+                raise ValueError("Wait for the current operation to finish.")
+            if record.get("status") != "AWAITING_APPROVAL":
+                raise ValueError("No patch is awaiting approval.")
+            if data.get("patch_hash") != patch_hash(record["patch"]):
+                raise ValueError("Patch changed. Reload and review the current patch.")
+            person = data.get("approved_by", "").strip()
+            if not person or len(person) > 80:
+                raise ValueError("Provide the approver name.")
+            if approve:
+                context = Context.load(Path(record["session"]))
+                now = datetime.now(timezone.utc)
+                approval_id = uuid4().hex
+                save_approval(context, ApprovalRecord(approval_id, iid, record["patch_hash"],
+                    context.repository.source, context.config["id"], person, now.isoformat(),
+                    (now + timedelta(hours=1)).isoformat()))
+                self.active_runs.update(iid, status="APPROVED", approval_id=approval_id)
+            else:
+                self.active_runs.update(iid, status="REJECTED")
+            self.store._emit("approval.received", {"decision": "APPROVED" if approve else "REJECTED",
+                              "patch_hash": record["patch_hash"], "approved_by": person}, iid, "Approval")
+            return {"status": "APPROVED" if approve else "REJECTED"}
+
+    def handler(self, ui_root):
         api = self
-
+        ui_root = ui_root.resolve()
         class Handler(BaseHTTPRequestHandler):
-            def reply(self, status: int, data: bytes, content_type: str) -> None:
+            def reply(self, status, data, kind="application/json"):
+                if not isinstance(data, bytes):
+                    data = json.dumps(data).encode()
                 self.send_response(status)
-                self.send_header("Content-Type", content_type)
+                self.send_header("Content-Type", kind)
                 self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("X-Content-Type-Options", "nosniff")
                 self.end_headers()
                 self.wfile.write(data)
 
-            def form_body(self) -> dict[str, list[str]]:
-                size = min(int(self.headers.get("Content-Length", "0")), 7000)
-                return parse_qs(self.rfile.read(size).decode("utf-8"))
+            def trusted(self):
+                host = self.headers.get("Host", "")
+                if host.split(":")[0] not in {"127.0.0.1", "localhost"}:
+                    return False
+                origin = self.headers.get("Origin")
+                return not origin or origin in {"http://" + host, "https://" + host}
 
-            def do_GET(self) -> None:
-                if self.path == "/api/incidents":
-                    return self.reply(
-                        200, json.dumps(api.payload()).encode("utf-8"), "application/json"
-                    )
-                if self.path == "/api/events":
-                    self.send_response(200)
-                    self.send_header("Content-Type", "text/event-stream")
-                    self.send_header("Cache-Control", "no-cache")
-                    self.send_header("Connection", "keep-alive")
-                    self.end_headers()
-                    listener = api.store.subscribe()
-                    event_path = api.store.root / "events.jsonl"
-                    offset = event_path.stat().st_size if event_path.exists() else 0
-                    seen = set()
-                    try:
-                        initial = {
-                            "type": "workspace.ready",
-                            "at": datetime.now(timezone.utc).isoformat(),
-                            "data": {"active_run": None},
-                        }
-                        self.wfile.write(
-                            f"event: trace\ndata: {json.dumps(initial)}\n\n".encode("utf-8")
-                        )
-                        self.wfile.flush()
-                        while True:
-                            events = []
-                            try:
-                                events.append(listener.get(timeout=1))
-                            except queue.Empty:
-                                pass
-                            if event_path.exists():
-                                with event_path.open("r", encoding="utf-8") as stream:
-                                    stream.seek(offset)
-                                    events.extend(json.loads(line) for line in stream if line.strip())
-                                    offset = stream.tell()
-                            for event in events:
-                                if event["id"] in seen:
-                                    continue
-                                seen.add(event["id"])
-                                payload = f"event: trace\ndata: {json.dumps(event)}\n\n".encode("utf-8")
-                                self.wfile.write(payload)
+            def do_GET(self):
+                if not self.trusted():
+                    return self.reply(403, {"message": "Loopback origin required."})
+                url = urlsplit(self.path)
+                query = parse_qs(url.query)
+                try:
+                    if url.path == "/api/incidents":
+                        return self.reply(200, api.payload())
+                    if url.path == "/api/capabilities":
+                        return self.reply(200, {"runtime_targets": [], "publish": False,
+                            "limitations": ["Docker adapter supports pinned Python/FastAPI targets.",
+                                           "Configure a runtime target before deployed investigation.",
+                                           "External publishing is unavailable until a target and authorization are configured."]})
+                    match = re.fullmatch(r"/api/incidents/([A-Za-z0-9_-]+)", url.path)
+                    if match:
+                        return self.reply(200, api.detail(match[1]))
+                    if url.path == "/api/events":
+                        iid = (query.get("investigation_id") or [None])[0]
+                        if iid:
+                            valid_id(iid)
+                        cursor = self.headers.get("Last-Event-ID") or (query.get("after") or [""])[0]
+                        api.store.replay(cursor, iid)  # Validate before committing HTTP headers.
+                        self.send_response(200)
+                        self.send_header("Content-Type", "text/event-stream")
+                        self.send_header("Cache-Control", "no-cache")
+                        self.end_headers()
+                        try:
+                            ready = json.dumps({"type": "workspace.ready", "data": {}})
+                            self.wfile.write(("event: trace\ndata: " + ready + "\n\n").encode())
                             self.wfile.flush()
-                    except (BrokenPipeError, ConnectionResetError):
-                        pass
-                    finally:
-                        api.store.unsubscribe(listener)
-                    return
+                            while True:
+                                batch = api.store.replay(cursor, iid)
+                                for event in batch:
+                                    self.wfile.write(f"id: {event['id']}\nevent: trace\ndata: {json.dumps(event)}\n\n".encode())
+                                    cursor = event["id"]
+                                if not batch:
+                                    self.wfile.write(b": heartbeat\n\n")
+                                self.wfile.flush()
+                                time.sleep(0.5)
+                        except (BrokenPipeError, ConnectionResetError, OSError):
+                            pass
+                        return
+                    relative = "index.html" if url.path == "/" else url.path.removeprefix("/workspace/")
+                    path = (ui_root / relative).resolve()
+                    if ui_root not in path.parents or not path.is_file():
+                        return self.reply(404, {"message": "Not found."})
+                    kind = {".js": "application/javascript", ".mjs": "application/javascript", ".css": "text/css"}.get(path.suffix, "text/html; charset=utf-8")
+                    return self.reply(200, path.read_bytes(), kind)
+                except (ValueError, KeyError):
+                    return self.reply(400, {"message": "Invalid request or unavailable incident."})
 
-                relative = (
-                    "index.html"
-                    if self.path == "/"
-                    else self.path.removeprefix("/workspace/")
-                    if self.path.startswith("/workspace/")
-                    else ""
-                )
-                file_path = (ui_root / relative).resolve()
-                if ui_root not in file_path.parents or not file_path.is_file():
-                    return self.reply(404, b"Not found", "text/plain")
-                content_type = {
-                    ".css": "text/css",
-                    ".js": "application/javascript",
-                }.get(file_path.suffix, "text/html; charset=utf-8")
-                return self.reply(200, file_path.read_bytes(), content_type)
+            def do_POST(self):
+                if not self.trusted():
+                    return self.reply(403, {"message": "Loopback origin required."})
+                try:
+                    size = int(self.headers.get("Content-Length", "0"))
+                    if not 0 <= size <= 100000:
+                        raise ValueError("Request body exceeds the limit.")
+                    raw = self.rfile.read(size).decode("utf-8")
+                    if self.headers.get("Content-Type", "").startswith("application/json"):
+                        data = json.loads(raw)
+                    else:
+                        data = {k: v[0] for k, v in parse_qs(raw, keep_blank_values=True).items()}
+                    if not isinstance(data, dict):
+                        raise ValueError("Expected an object.")
+                    iid = data.get("incident_id", "")
+                    if self.path == "/api/incidents":
+                        item = api.store.create(data.get("repository", ""), data.get("report", ""),
+                                                data.get("reproduction_command", ""), data.get("runtime", ""))
+                        return self.reply(201, {"item": item})
+                    if self.path == "/api/pricing":
+                        rate = validate_pricing(data)
+                        with api._actions:
+                            path = api.store.root / "pricing.json"
+                            prices = json.loads(path.read_text()) if path.exists() else {}
+                            prices[rate["model"]] = rate
+                            atomic_json(path, prices)
+                        return self.reply(200, {"message": "Estimate rates saved.", "rate": rate})
+                    if self.path == "/api/runs":
+                        if iid:
+                            item = api.store.get(iid)
+                            api.validate_input(item["repository"], item["report"], item["reproduction_command"], item["runtime"])
+                            api.launch(iid, "investigate")
+                        else:
+                            item = api.start_investigation(data.get("repository", ""), data.get("report", ""),
+                                data.get("reproduction_command", ""), data.get("runtime", ""))
+                        return self.reply(202, {"item": item})
+                    action = self.path.removeprefix("/api/")
+                    if action in {"messages", "pause", "resume", "stop"}:
+                        result = api.operator_action("message" if action == "messages" else action, data.get("message", ""), iid)
+                    elif action in {"plan", "execute"}:
+                        result = api.launch(iid, action)
+                    elif action in {"approve", "reject"}:
+                        result = api.approval(iid, data, action == "approve")
+                    elif action == "snapshot":
+                        detail = api.detail(iid)
+                        atomic_json(api.store.root / f"snapshot-{iid}-{uuid4().hex[:8]}.json", detail)
+                        result = api.store._emit("checkpoint.snapshot", {"message": "Public investigation snapshot saved."}, iid)
+                    else:
+                        return self.reply(404, {"message": "Unavailable action."})
+                    return self.reply(202, result)
+                except (ValueError, KeyError, TypeError) as exc:
+                    return self.reply(400, {"message": public(str(exc))})
+                except OSError:
+                    return self.reply(503, {"message": "Workspace storage or process unavailable."})
 
-            def do_POST(self) -> None:
-                form = self.form_body()
-                if self.path == "/api/incidents":
-                    try:
-                        item = api.store.create(
-                            (form.get("repository") or [""])[0],
-                            (form.get("report") or [""])[0],
-                            (form.get("reproduction_command") or [""])[0],
-                            (form.get("runtime") or [""])[0],
-                        )
-                    except ValueError:
-                        return self.reply(
-                            400,
-                            b'{"message":"Provide a repository and incident report."}',
-                            "application/json",
-                        )
-                    return self.reply(
-                        201, json.dumps({"item": item}).encode("utf-8"), "application/json"
-                    )
-                if self.path == "/api/runs":
-                    try:
-                        item = api.start_investigation(
-                            (form.get("repository") or [""])[0],
-                            (form.get("report") or [""])[0],
-                            (form.get("reproduction_command") or [""])[0],
-                            (form.get("runtime") or [""])[0],
-                        )
-                    except ValueError:
-                        return self.reply(400, b'{"message":"Use a local target repository directory and incident report."}', "application/json")
-                    return self.reply(202, json.dumps({"item": item}).encode("utf-8"), "application/json")
-
-                routes = {
-                    "/api/messages": "message",
-                    "/api/pause": "pause",
-                    "/api/resume": "resume",
-                    "/api/stop": "stop",
-                }
-                if self.path in routes:
-                    try:
-                        event = api.operator_action(
-                            routes[self.path], (form.get("message") or [""])[0], (form.get("incident_id") or [""])[0]
-                        )
-                    except ValueError:
-                        return self.reply(
-                            400, b'{"message":"Invalid operator action."}', "application/json"
-                        )
-                    return self.reply(
-                        202, json.dumps({"event": event}).encode("utf-8"), "application/json"
-                    )
-                return self.reply(404, b"{}", "application/json")
-
-            def log_message(self, *_args) -> None:
+            def log_message(self, *_args):
                 pass
-
         return Handler
 
 
-def serve_workspace(root: Path, port: int = 8875) -> None:
+def serve_workspace(root, port=8875):
     api = WorkspaceAPI(root)
-    ui_root = Path(__file__).parents[1] / "ui" / "workspace"
-    server = ThreadingHTTPServer(("127.0.0.1", port), api.handler(ui_root))
-    print(
-        f"TraceRoot workspace: http://127.0.0.1:{port} "
-        f"SSE: http://127.0.0.1:{port}/api/events",
-        flush=True,
-    )
+    server = ThreadingHTTPServer(("127.0.0.1", port), api.handler(Path(__file__).parents[1] / "ui" / "workspace"))
+    print(f"TraceRoot workspace: http://127.0.0.1:{port}", flush=True)
     server.serve_forever()

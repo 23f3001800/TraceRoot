@@ -257,6 +257,21 @@ def _auditor_final_report(state: dict, hypothesis: dict) -> dict:
     validate_final(final, state["steps"])
     return final
 
+
+def _best_supported_hypothesis(state: dict) -> dict:
+    """Choose a supported claim that independently satisfies the final evidence boundary."""
+    failures = []
+    candidates = [item for item in state["hypotheses"] if item["status"] == "supported"]
+    for hypothesis in sorted(candidates, key=lambda item: len(item["evidence"]), reverse=True):
+        try:
+            _auditor_final_report(state, hypothesis)
+            return hypothesis
+        except ValueError as exc:
+            failures.append(str(exc))
+    if not candidates:
+        raise ValueError("SUPPORTED requires an evidence-linked supported hypothesis.")
+    raise ValueError(failures[0] if failures else "No supported hypothesis satisfies the final evidence boundary.")
+
 class OperatorHalt(Exception):
     pass
 
@@ -400,10 +415,7 @@ def build_graph(runtime: GraphRuntime):
             validate(audit, AUDIT_SCHEMA)
             verdict = audit["verdict"]
             if verdict == "SUPPORTED":
-                matches = [h for h in state["hypotheses"] if h["status"] == "supported"]
-                if not matches:
-                    raise ValueError("SUPPORTED requires an evidence-linked supported hypothesis.")
-                _auditor_final_report(state, matches[0])
+                _best_supported_hypothesis(state)
         except ValueError as exc:
             state["invalid"] += 1
             state["consecutive_invalid"] += 1
@@ -485,7 +497,7 @@ def build_graph(runtime: GraphRuntime):
 
     def root_cause_report(state: InvestigationState):
         runtime.state = state
-        hypothesis = next(item for item in state["hypotheses"] if item["status"] == "supported")
+        hypothesis = _best_supported_hypothesis(state)
         state["final"] = _auditor_final_report(state, hypothesis)
         runtime.emit("stage.changed", label="Root cause")
         runtime.emit("report.ready", report=state["final"])
@@ -624,4 +636,3 @@ def _result(context, provider, budget, state, directory):
     atomic_json(directory / "final.json", final)
     atomic_json(directory / "summary.json", summary)
     return {"final": final, "summary": summary}
-

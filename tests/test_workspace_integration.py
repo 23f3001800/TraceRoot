@@ -119,6 +119,29 @@ def test_stale_approval_is_rejected_before_execution(tmp_path):
         api.approval(item["id"], {"patch_hash": "stale", "approved_by": "Tester"}, True)
 
 
+def test_auditor_selects_supported_hypothesis_with_independent_evidence(active):
+    from traceroot.agents.langgraph import _best_supported_hypothesis
+    from traceroot.contracts import ToolResult
+    from test_investigator import evidence, logs_output, source_output
+    reproduction = ToolResult("ok", {"outcome": "failed", "reproduced": True, "passed": 0,
+        "failed": 1, "errors": 0, "exit_code": 1, "failing_tests": ["tests/test_api.py::test_case"]})
+    weak = {"id": "H1", "claim": "Constraint failed.", "status": "supported", "confidence": "high",
+            "evidence": [evidence(2, "/data/entries/0/message", "connection refused to port 9001")],
+            "missing_evidence": []}
+    strong = {"id": "H2", "claim": "Source configuration conflicts with runtime.", "status": "supported",
+              "confidence": "high", "evidence": [
+                  evidence(2, "/data/entries/0/message", "connection refused to port 9001"),
+                  evidence(3, "/data/lines/0/text", "configured_port = 9000")],
+              "missing_evidence": []}
+    state = {"initial": {"task": {"bug_report": "Service fails."}},
+             "steps": [
+                 {"step": 1, "tool": "run_reproduction", "result": reproduction.to_dict()},
+                 {"step": 2, "tool": "read_logs", "result": logs_output().to_dict()},
+                 {"step": 3, "tool": "read_file", "result": source_output().to_dict()}],
+             "hypotheses": [weak, strong], "current_subsystem": "service"}
+    assert _best_supported_hypothesis(state)["id"] == "H2"
+
+
 def test_stop_paused_without_worker_is_terminal(tmp_path):
     api = WorkspaceAPI(tmp_path)
     item = api.store.create("/target", "Failure")

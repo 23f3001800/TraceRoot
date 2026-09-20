@@ -33,9 +33,10 @@ function render() {
   const { incident, run } = state;
   $('#d-title').textContent = incident ? incident.report : 'No active investigation';
   $('#d-repo').textContent = incident?.repository || 'Create or select an incident';
-  $('#d-chip').textContent = pretty(run.status);
+  const outcome = run.status === 'FINISHED' ? run.final?.status || run.summary?.status || run.status : run.status;
+  $('#d-chip').textContent = pretty(outcome);
   $('#d-chip').className = 'chip ' + (run.status === 'RUNNING' ? 'chip-active' :
-    ['FAILED', 'INTERRUPTED'].includes(run.status) ? 'chip-error' : 'chip-paused');
+    ['FAILED', 'INTERRUPTED'].includes(run.status) || /FAILURE|FAILED|INSUFFICIENT|CONTRADICTED/.test(outcome || '') ? 'chip-error' : 'chip-paused');
   $('#d-elapsed').textContent = state.events.length ? 'Last event ' + time(state.events.at(-1).at) : '';
   $('#d-summary').innerHTML = incident ? [
     ['Repository', incident.repository], ['Incident', incident.id], ['Description', incident.report],

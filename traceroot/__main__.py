@@ -47,6 +47,14 @@ def main():
     workspace_ui = commands.add_parser("workspace-ui", help="Serve the loopback-only incident reporting workspace")
     workspace_ui.add_argument("--workspace-dir", type=Path, default=Path(".traceroot-workspace"))
     workspace_ui.add_argument("--port", type=int, default=8875)
+    monitor = commands.add_parser("monitor", help="Autonomously detect and audit deployed AI incidents")
+    monitor.add_argument("--name", default="eduforge-ai")
+    monitor.add_argument("--url", required=True)
+    monitor.add_argument("--repository", required=True)
+    monitor.add_argument("--workspace-dir", type=Path, default=Path(".traceroot-workspace"))
+    monitor.add_argument("--state-file", type=Path, default=Path(".traceroot-monitor.json"))
+    monitor.add_argument("--env-file", type=Path, default=Path(".env"))
+    monitor.add_argument("--interval", type=int, help="Poll continuously at this interval (seconds)")
     args = parser.parse_args()
     try:
 
@@ -57,6 +65,20 @@ def main():
         if args.command == "workspace-ui":
             from .workspace_ui import serve_workspace
             serve_workspace(args.workspace_dir.resolve(), args.port)
+            return 0
+        if args.command == "monitor":
+            from .autonomous_monitor import AutonomousMonitor, EduForgeTelemetryClient, MonitorConfig
+            from .llms.config import LLMConfig
+            from .llms.provider import load_provider
+            from .workspace_events import IncidentStore
+            config = MonitorConfig(args.name, args.url, args.repository)
+            service = AutonomousMonitor(config, EduForgeTelemetryClient(config),
+                IncidentStore(args.workspace_dir.resolve()), args.state_file.resolve(),
+                load_provider(args.env_file, LLMConfig()))
+            if args.interval:
+                service.run_forever(args.interval)
+                return 0
+            print(json.dumps(service.run_once(), indent=2))
             return 0
         if args.command == "tool-schemas":
             from .agents.schemas import CATALOG

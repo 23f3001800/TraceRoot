@@ -64,3 +64,14 @@ def test_no_incident_for_healthy_telemetry(tmp_path: Path):
         Client(snapshot()), store, tmp_path / "cursor.json", Auditor()).run_once()
     assert result["status"] == "healthy"
     assert store.list() == []
+
+
+def test_partial_job_and_quality_warning_trigger_cross_component_evidence():
+    current = snapshot()
+    current["jobs"] = [{"job_id": "446c7d47-1e03-41fa-a432-a47aea05557e",
+        "status": "succeeded_partial", "progress": 100,
+        "usage": {"tokens": 30835, "cost_usd": 0.0},
+        "warnings": ["educational-classification: low confidence: grade_band"], "error": None}]
+    signals = detect(current, snapshot())
+    assert {signal["kind"] for signal in signals} == {"application", "model"}
+    assert correlate(signals)[1][0]["status"] == "supported"

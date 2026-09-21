@@ -55,6 +55,7 @@ def main():
     monitor.add_argument("--state-file", type=Path, default=Path(".traceroot-monitor.json"))
     monitor.add_argument("--env-file", type=Path, default=Path(".env"))
     monitor.add_argument("--interval", type=int, help="Poll continuously at this interval (seconds)")
+    monitor.add_argument("--job-id", action="append", default=[], help="Also watch a bounded deployed job UUID")
     args = parser.parse_args()
     try:
 
@@ -71,7 +72,8 @@ def main():
             from .llms.config import LLMConfig
             from .llms.provider import load_provider
             from .workspace_events import IncidentStore
-            config = MonitorConfig(args.name, args.url, args.repository)
+            config = MonitorConfig(args.name, args.url, args.repository,
+                                   watched_job_ids=tuple(args.job_id))
             service = AutonomousMonitor(config, EduForgeTelemetryClient(config),
                 IncidentStore(args.workspace_dir.resolve()), args.state_file.resolve(),
                 load_provider(args.env_file, LLMConfig()))

@@ -8,7 +8,7 @@ from typing import Protocol
 from .contracts import ToolError, ToolResult
 
 _REFERENCE = re.compile(r"^[A-Z][A-Z0-9_]{2,127}$")
-_SECRET_KEY = re.compile(r"(?i)(token|password|secret|api.?key|authorization)")
+_SECRET_KEY = re.compile(r"(?i)(access.?token|refresh.?token|password|secret|api.?key|authorization)")
 
 
 @dataclass(frozen=True)

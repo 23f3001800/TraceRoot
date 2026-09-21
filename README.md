@@ -1,191 +1,136 @@
 # TraceRoot
 
-TraceRoot investigates software incidents, records evidence, and produces a root-cause report. It runs against a separate target repository and preserves the target Git history.
+**Autonomous incident monitoring and recovery for deployed AI applications.**
 
-## What it does
+TraceRoot detects failures from production telemetry, correlates evidence across application and AI components, independently audits the proposed root cause, and prepares bounded remediation. Investigation is read-only; source, runtime, and deployment changes require explicit human approval and deterministic verification.
 
-1. Reproduces the reported failure.
-2. Collects bounded runtime evidence.
-3. Uses one read-only Investigator to select evidence tools.
-4. Uses an independent Evidence Auditor to check root-cause claims.
-5. Creates a proposal-only remediation plan only after ROOT_CAUSE_SUPPORTED.
+## What it demonstrates
 
-The current agents are Investigator, Evidence Auditor, and Remediation Planner. The planner has no tools or write permissions.
+AI applications fail across application code, models, providers, prompts, retrieval, tools, infrastructure, and data. TraceRoot turns those disconnected signals into one evidence-backed workflow:
+
+1. Monitor deployed health, jobs, metrics, logs, and traces.
+2. Detect runtime, application, model, provider, RAG, and tool failures.
+3. Open an incident automatically, without a manual bug report.
+4. Correlate evidence into testable root-cause hypotheses.
+5. Use an independent, tool-less Evidence Auditor to validate cited claims.
+6. Propose the smallest bounded remediation.
+7. Require exact human approval before any write.
+8. Execute only in disposable Docker and verify actual recovery.
+
+## Live Azure integration
+
+TraceRoot is connected read-only to the deployed **EduForge AI** application on Azure App Service. The connector collects health and readiness, job state and warnings, token usage and cost, measured application/model counters, and bounded Prometheus telemetry. It stores credential references rather than credential values, keeps a durable cursor, computes counter deltas, and suppresses duplicate incidents.
+
+### Verified live result — 20 September 2026
+
+A controlled authenticated job exercised the real Azure-backed EduForge pipeline:
+
+| Result | Measured value |
+| --- | ---: |
+| Job ID | `446c7d47-1e03-41fa-a432-a47aea05557e` |
+| Terminal state | `succeeded_partial` |
+| Completed stages | 10/10 |
+| Model attempts | 16 |
+| Tokens consumed | 30,835 |
+| Warning | `educational-classification: low confidence: grade_band` |
+| HTTP 5xx in retained Azure sample | 0 |
+
+This is a real model-quality degradation, not a fixture: the application completed only partially after reporting low-confidence classification. TraceRoot recognizes the transition and warning as correlated application and model evidence.
+
+The final live Evidence Auditor call was intentionally not run after the operator requested no additional model-quota use. The path is covered locally, but the first production milestone is not described as fully audited until that live audit completes.
 
 ## Architecture
 
 ```mermaid
-flowchart TD
-    I[Incident] --> R[Deterministic reproduction]
-    R --> INV[Investigator]
-    INV --> TG[Read-only tool gateway]
-    TG --> ES[Shared evidence state]
-    ES --> AUD[Evidence Auditor]
-    AUD -->|Insufficient or contradicted| INV
-    AUD -->|Supported| RCA[Root-cause report]
-    RCA --> PLAN[Remediation Planner]
+flowchart LR
+    APP[Deployed AI app] --> OBS[Read-only telemetry]
+    OBS --> DET[Detection and deduplication]
+    DET --> INC[Durable incident]
+    INC --> INV[Investigator]
+    INV --> E[Bounded evidence tools]
+    E --> AUD[Independent Auditor]
+    AUD -->|Insufficient| INV
+    AUD -->|Supported| PLAN[Remediation proposal]
     PLAN --> HUMAN[Human approval]
-    HUMAN --> GATE[Approval and patch policy]
-    GATE --> SANDBOX[Disposable Docker sandbox]
-    SANDBOX --> EXEC[Sandbox Executor]
-    EXEC --> VERIFY[Deterministic Verifier]
-    VERIFY -->|Verified| GIT[Future branch commit draft PR]
-    VERIFY -->|Failed| DISCARD[Discard sandbox]
+    HUMAN --> DOCKER[Disposable execution]
+    DOCKER --> VERIFY[Recovery verification]
+    VERIFY --> PR[Approved branch / draft PR]
 ```
+
+Monitoring extends the existing incident state machine. It does not add another agent or bypass investigation, audit, approval, execution, or verification boundaries.
 
 ## Safety boundaries
 
-- Target source, logs, database inspection, configuration, Git, and tests are read-only during investigation.
-- Benchmark ground-truth paths are blocked.
-- LocalRunner is investigation-only.
-- DockerRunner is required for future execution.
-- Exact-diff human approvals bind patch hash, investigation, repository, sandbox session, expiry, and consumption state.
-- Patch application is allowed only after exact human approval, deterministic patch-policy validation, Docker-side git apply --check, and Docker-only execution.
-
-## Status
-
-BUG-003 reached ROOT_CAUSE_SUPPORTED with an Auditor verdict of SUPPORTED.
-
-BUG-006 has a deterministic Docker reproduction: the public regression test expected paid and observed pending. Its live graph run later ended as MODEL_DECISION_FAILURE after invalid Azure output, before the Auditor ran.
-
-BUG-005 remains incomplete. Its Auditor identified missing runtime pool, stack-trace, and request-correlation evidence.
+- Investigation tools are read-only and schema constrained.
+- Runtime connectors use HTTPS origins, bounded reads, timeouts, and credential references.
+- Secrets and authorization fields are redacted before evidence is stored.
+- Private reasoning, prompts, and tool arguments are not published.
+- The Evidence Auditor has no tools and cannot manufacture evidence.
+- Remediation remains proposal-only until exact human approval.
+- Approved changes run only in a disposable Docker environment.
+- Recovery requires the original reproduction and regression suite to pass.
+- Target commits and PR preparation require separately bound approvals.
 
 ## Run
 
-Prepare an isolated target environment:
+Requirements: Python 3.12, Docker for sandbox execution, and one configured model provider.
 
-    python -m traceroot prepare --repository TARGET_REPOSITORY --docker "$(command -v docker)"
+```bash
+python3 -m pip install -r requirements.txt
+python3 -m pytest -q
+```
 
-Run an investigation using a sanitized target checkout and a local provider configuration:
+Start autonomous read-only monitoring:
 
-    python -m traceroot investigate --session SESSION --task-file task.json --env-file .env
+```bash
+python3 -m traceroot monitor \
+  --name eduforge-ai \
+  --url https://eduforge-ai.azurewebsites.net \
+  --repository https://github.com/23f3001800/EduForge-AI \
+  --workspace-dir .traceroot-workspace \
+  --state-file .traceroot-monitor.json \
+  --interval 30
+```
 
-See [manual runs](docs/day-6-manual-runs.md) and [state and recovery](docs/investigation-state.md).
+Add `--job-id JOB_UUID` to watch a deployed job. Other operator entry points:
+
+```bash
+python3 -m traceroot prepare --repository TARGET_REPOSITORY --docker "$(command -v docker)"
+python3 -m traceroot investigate --session SESSION --task-file task.json --env-file .env
+python3 -m traceroot workspace-ui
+python3 -m traceroot approval-ui --session SESSION --patch-file PATCH --investigation-id ID
+```
 
 ## Verification
 
-The verifier must be deterministic because the planner must not judge its own proposal. When enabled, it returns FIX_VERIFIED only if the original reproduction passes and the regression suite passes. Other outcomes distinguish persistent reproduction failure, regressions, and execution failure.
+- Monitor plus workspace/recovery integration: **32 tests passed** before watched-job support.
+- Repository regression run: **169 passed, 5 skipped**.
+- One environment-only failure remained because `google.genai` was absent from the active interpreter.
+- Real Docker remediation previously completed with exact approval, policy validation, passing reproduction and regression, approval consumption, and sandbox destruction.
 
-Implementation logs and benchmark results are in [docs](docs/).
+Test totals are evidence from named runs, not invented status indicators.
 
-Latest application verification: 122 passed, 4 skipped.
+## Repository map
 
-Docker patch dry-run verification: 7 executor and dry-run tests passed.
+| Path | Responsibility |
+| --- | --- |
+| `traceroot/autonomous_monitor.py` | Telemetry, detection, correlation, deduplication, audit handoff |
+| `traceroot/agents/` | Investigator, Auditor, planner, approval, executor, verifier |
+| `traceroot/runtime_connectors.py` | Credential-reference gateway and redaction |
+| `traceroot/workspace_events.py` | Durable incident/event journal |
+| `traceroot/tools/` | Bounded read-only evidence tools |
+| `ui/workspace/` | Local incident operations console |
+| `tests/` | Contract, recovery, sandbox, provider, workspace, and monitoring tests |
+| `docs/` | Architecture decisions, policies, benchmarks, operator guides |
 
-Approved Docker patch application was exercised with a real human-approved BUG-001 patch. The approval was consumed, the original reproduction passed, and the regression suite passed.
+## Known limitations
 
-Deterministic verifier statuses are implemented and tested: FIX_VERIFIED, REPRODUCTION_STILL_FAILS, REGRESSION_INTRODUCED, and VERIFICATION_TOOL_FAILURE.
+- One live Auditor call remains for the EduForge partial-success incident.
+- Azure logs and distributed traces are not retained because the deployed app has no Log Analytics diagnostic routing.
+- RAG and tool signals need first-class normalization when the application exports those spans.
+- EduForge metrics currently reset on application restart.
+- Recovery should be proven on a dedicated staging deployment before production remediation is enabled.
 
-Sandbox rollback restores the base session image; sandbox destruction removes session-owned containers, network, and images.
+TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.
 
-- BUG-001 end-to-end remediation completed: exact approval, Docker patch check, derived-image apply, reproduction 1/1 passing, regression 14/14 passing, and sandbox destruction.
-
-## Approval interface
-
-Run `python -m traceroot approval-ui --session SESSION --patch-file PATCH --investigation-id ID`. Open the displayed localhost URL, inspect the exact diff and SHA-256, then approve it. The UI is loopback-only and writes the same bound approval record used by the executor.
-
-The full local dashboard lives in `ui/` and is served by `approval-ui` on localhost.
-
-Approval UI runtime smoke test added after missing import fix.
-
-The approval dashboard uses a loopback WebSocket for live backend-to-frontend approval events. APIs live under `traceroot/api/`.
-
-Docker patch dry-run now streams the approved diff with interactive stdin.
-
-The UI is an incident-response workspace, not a coding editor; it shows evidence, audit, remediation, and sandbox approval state.
-
-## Latest live remediation result
-
-BUG-001 completed in a disposable Docker session. The exact approved patch was applied to a derived image only. The original reproduction passed **1/1** and the regression suite passed **14/14**. The approval was consumed and the session containers, network, base image, and derived image were destroyed.
-
-Latest benchmark result: BUG-003 exact approved remediation returned FIX_VERIFIED in Docker. The retry reproduction passed 1/1 and the regression suite passed 15/15; its disposable sandbox was destroyed.
-
-Latest benchmark reproduction: BUG-004 failed 1/1 in Docker. Payment returned HTTP 500 where 201 is expected after the httpx upgrade. Its review-only candidate replaces obsolete httpx proxies with proxy and awaits exact approval.
-
-## Repository hygiene
-
-Generated sessions, caches, logs, local credentials, UI caches, and generated run documents are ignored. Required README and milestone documentation remain tracked.
-
-Provider probe: Gemini 2.5 Flash returned MODEL_PROVIDER_FAILURE in 1.98 seconds for a harmless JSON health check. No target or incident data was sent.
-
-Provider probe: OpenRouter nex-agi/nex-n2.5-mini:free returned valid JSON in 1.24 seconds (24 input, 8 output tokens). It is the preferred provider before Azure fallback.
-
-## Verified branch workflow
-
-After FIX_VERIFIED, TraceRoot can create a clean local traceroot/ branch and commit the exact policy-validated patch. It never pushes, merges, or opens a PR. Focused verification: 2 passed.
-
-## Draft PR preparation
-
-After FIX_VERIFIED, TraceRoot can prepare a bounded PR-ready title and body from incident, evidence, remediation, files, verification, and limitations. It rejects secrets and unverified requests, and does not publish. Focused verification: 2 passed.
-
-Latest full verification: 138 passed, 4 skipped.
-
-## Target commit approval
-
-Local target branch commits require a separate persisted approval bound to target repository, sandbox session, exact action hash, branch, patch, commit message, and FIX_VERIFIED status. The approval is consumed after the commit succeeds. Focused verification: 8 passed.
-
-## MCP gateway
-
-TraceRoot now has a read-only MCP gateway for Git, runtime, and database tool families. It preserves structured results, separates transport failure from tool failure, and denies arbitrary tool families. Focused verification: 3 passed.
-
-## Explicit MCP policy
-
-The enforced [MCP permission policy](docs/mcp-permission-policy.md) sets MCP_ACCESS_MODE to read_only. Git, runtime, and database evidence tools are allowed; write verbs are denied. Focused verification: 4 passed.
-
-## Incident workspace and demo
-
-Run `python -m traceroot workspace-ui` to open a loopback-only incident workspace. It saves reports locally without starting agents or changing targets. See [final benchmark](docs/final-benchmark.md) and [local demo](docs/local-demo.md). Workspace verification: 1 passed.
-
-Live workspace verification: loopback incident API responded successfully with an empty local report list.
-
-## Live operator channel
-
-The incident workspace has a loopback WebSocket channel for operator messages and checkpoint requests. It broadcasts events to the dashboard and does not start or alter an inactive investigation. Verification: one local message delivery passed.
-
-## Incident workspace event stream
-
-The incident workspace now uses a three-panel investigation console: stages and agents, a live event stream, and evidence/state. It uses loopback Server-Sent Events for backend-to-browser semantic events and HTTP POST for incident reports, messages, pause, and resume requests. It never exposes private model reasoning.
-
-See [workspace event contract](docs/workspace-event-contract.md) and [local demo](docs/local-demo.md).
-
-Verification: workspace SSE persistence test passed; live loopback API returned an empty incident list and the `workspace.ready` SSE event.
-
-Full regression verification after the SSE workspace update: 143 passed, 4 skipped.
-
-## Live graph event bridge
-
-Use `--workspace-dir .traceroot-workspace` with `investigate` or `resume` to publish bounded LangGraph progress into the local SSE timeline. The bridge translates graph transitions, tool events, and provider failures into concise public event types; it does not pass prompts, tool arguments, secrets, or private reasoning.
-
-Verification: workspace bridge plus LangGraph focused tests passed, 13 tests total.
-
-Full regression verification after the graph event bridge: 144 passed, 4 skipped.
-
-## Workspace interface consolidation
-
-The repository now has one UI asset root: `ui/`. The exact-patch approval page uses `ui/`; the incident operations console uses `ui/workspace/`. The console now has a stronger three-panel layout for stages and agents, live events, and evidence state.
-
-If port 8875 is already occupied, `workspace-ui` returns `workspace_port_unavailable` with an explicit message. Start the existing page at http://127.0.0.1:8875 or choose a different `--port`.
-
-Verification: workspace tests passed (2 tests). The consolidated server started on port 8875; a second startup returned the expected port-conflict status.
-
-Full regression verification after UI consolidation: 144 passed, 4 skipped.
-
-## Modular incident workspace UI
-
-The incident console was redesigned as a simple, ASCII-safe workspace with explicit repository, incident, reproduction, and runtime inputs. It has a ChatGPT-style conversation center and coding-agent-style activity visibility.
-
-The UI is modular under `ui/workspace/`: HTML, three CSS layers, API transport, event rendering, and page control are separate files. See [workspace UI guide](docs/workspace-ui.md).
-
-Verification: workspace contract tests passed (2 tests); seven UI files passed an ASCII check; the live default page served the revised Incident input screen.
-
-Full regression verification after modular workspace update: 144 passed, 4 skipped.
-
-## Workspace form-reset correction
-
-Incident saving completed before the browser tried to reset the form through an expired async event reference. The handler now captures the form before awaiting the API result, then resets that saved reference.
-
-Verification: workspace UI and frontend regression tests passed, 3 tests total.
-
-Workspace layout simplified to one essential sidebar; live activity remains in the central investigation timeline.
-
-Full regression verification after workspace reliability update: 145 passed, 4 skipped.
+Licensed under [LICENSE](LICENSE).

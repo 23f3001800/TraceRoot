@@ -40,6 +40,7 @@ class MonitorConfig:
     repository: str
     credential_reference: str = "AZURE_CLI"
     timeout_seconds: float = 10.0
+    watched_job_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         parsed = urlparse(self.base_url)
@@ -53,6 +54,10 @@ class MonitorConfig:
             raise ValueError("credentials must be referenced, never embedded")
         if not 1 <= self.timeout_seconds <= 30:
             raise ValueError("timeout must be between 1 and 30 seconds")
+        if len(self.watched_job_ids) > 20 or any(
+            not re.fullmatch(r"[0-9a-fA-F-]{36}", value) for value in self.watched_job_ids
+        ):
+            raise ValueError("watched job IDs must be bounded UUIDs")
 
 
 class EduForgeTelemetryClient:
@@ -91,6 +96,12 @@ class EduForgeTelemetryClient:
             values["metrics"] = parse_prometheus(self._read("/metrics", "text/plain").decode("utf-8", "replace"))
         except (HTTPError, URLError, TimeoutError, OSError, ValueError) as exc:
             errors.append({"source": "metrics", "type": type(exc).__name__})
+        values["jobs"] = []
+        for job_id in self.config.watched_job_ids:
+            try:
+                values["jobs"].append(self._json(f"/api/v1/jobs/{job_id}"))
+            except (HTTPError, URLError, TimeoutError, OSError, ValueError, json.JSONDecodeError) as exc:
+                errors.append({"source": f"job:{job_id}", "type": type(exc).__name__})
         return {"application": self.config.name, "base_url": self.config.base_url,
                 "collected_at": datetime.now(timezone.utc).isoformat(), **values,
                 "collector_errors": errors}
@@ -162,6 +173,21 @@ def detect(snapshot: dict[str, Any], previous: dict[str, Any] | None) -> list[di
         kind = "provider" if outcome.casefold() in _PROVIDER_OUTCOMES else "model"
         signals.append({"kind": kind, "source": key, "outcome": outcome,
                         "value": change, "counter": value})
+    previous_jobs = {job.get("job_id"): job for job in (previous or {}).get("jobs", [])
+                     if isinstance(job, dict) and job.get("job_id")}
+    for job in snapshot.get("jobs", []):
+        if not isinstance(job, dict) or not job.get("job_id"):
+            continue
+        prior_status = (previous_jobs.get(job["job_id"]) or {}).get("status")
+        status = job.get("status")
+        if status in _TERMINAL_JOB_FAILURES | {"succeeded_partial"} and status != prior_status:
+            signals.append({"kind": "application", "source": f"job:{job['job_id']}",
+                            "status": status, "progress": job.get("progress"),
+                            "usage": job.get("usage"), "error": job.get("error")})
+        for warning in job.get("warnings") or []:
+            if status == "succeeded_partial" and status != prior_status:
+                signals.append({"kind": "model", "source": f"job:{job['job_id']}:warning",
+                                "outcome": "quality_degradation", "warning": str(warning)[:500]})
     return signals
 
 
@@ -174,7 +200,7 @@ def correlate(signals: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list
     if "application" in kinds and "provider" in kinds:
         claim = "A provider failure coincided with an EduForge job failure in the same monitoring interval."
     elif "application" in kinds and "model" in kinds:
-        claim = "A non-successful model outcome coincided with an EduForge job failure in the same monitoring interval."
+        claim = "A model-quality degradation caused EduForge to complete the watched job only partially."
     elif "runtime" in kinds:
         claim = "The deployed EduForge runtime or its telemetry endpoint is unavailable."
     else:

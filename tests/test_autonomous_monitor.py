@@ -1,7 +1,8 @@
 import json
 from pathlib import Path
 
-from traceroot.autonomous_monitor import AutonomousMonitor, MonitorConfig, correlate, detect, parse_prometheus
+from traceroot.autonomous_monitor import (AutonomousMonitor, MonitorConfig, correlate, detect,
+                                          parse_prometheus, remediation_proposal)
 from traceroot.llms.provider import ModelReply
 from traceroot.workspace_events import IncidentStore
 
@@ -75,3 +76,4 @@ def test_partial_job_and_quality_warning_trigger_cross_component_evidence():
     signals = detect(current, snapshot())
     assert {signal["kind"] for signal in signals} == {"application", "model"}
     assert correlate(signals)[1][0]["status"] == "supported"
+    assert "educational-classification checkpoint" in remediation_proposal(signals)

@@ -35,29 +35,42 @@ A controlled authenticated job exercised the real Azure-backed EduForge pipeline
 | Warning | `educational-classification: low confidence: grade_band` |
 | HTTP 5xx in retained Azure sample | 0 |
 
-This is a real model-quality degradation, not a fixture: the application completed only partially after reporting low-confidence classification. TraceRoot recognizes the transition and warning as correlated application and model evidence.
+This is a real model-quality degradation, not a fixture: the application completed only partially after reporting low-confidence classification. TraceRoot recognized the transition and warning as correlated application and model evidence, automatically opened incident `b57b4ab4fc21`, and invoked the independent Evidence Auditor once with a 1,024-token output cap, no thinking budget, and no retries.
 
-The final live Evidence Auditor call was intentionally not run after the operator requested no additional model-quota use. The path is covered locally, but the first production milestone is not described as fully audited until that live audit completes.
+The Auditor returned **SUPPORTED** with two citations: the application-level `succeeded_partial` observation and the model-level low-confidence classification warning. Remediation remains unexecuted and explicitly requires human approval.
 
 ## Architecture
 
 ```mermaid
-flowchart LR
-    APP[Deployed AI app] --> OBS[Read-only telemetry]
-    OBS --> DET[Detection and deduplication]
-    DET --> INC[Durable incident]
-    INC --> INV[Investigator]
-    INV --> E[Bounded evidence tools]
-    E --> AUD[Independent Auditor]
-    AUD -->|Insufficient| INV
-    AUD -->|Supported| PLAN[Remediation proposal]
-    PLAN --> HUMAN[Human approval]
-    HUMAN --> DOCKER[Disposable execution]
-    DOCKER --> VERIFY[Recovery verification]
-    VERIFY --> PR[Approved branch / draft PR]
+flowchart TD
+    A[Deployed AI application]
+    B[Read-only monitoring]
+    C[Automatic incident]
+    D[Investigator and evidence tools]
+    E[Independent Evidence Auditor]
+    F[Bounded remediation proposal]
+    G{Human approval}
+    H[Disposable Docker execution]
+    I[Deterministic recovery verification]
+
+    A --> B --> C --> D --> E
+    E -->|More evidence needed| D
+    E -->|Root cause supported| F --> G
+    G -->|Approved| H --> I
+    G -->|Rejected| C
 ```
 
 Monitoring extends the existing incident state machine. It does not add another agent or bypass investigation, audit, approval, execution, or verification boundaries.
+
+### Component count
+
+TraceRoot has **three AI decision roles**:
+
+1. **Investigator** — selects bounded read-only evidence actions and maintains hypotheses.
+2. **Evidence Auditor** — judges only supplied evidence and has no tools.
+3. **Remediation Planner** — proposes a bounded change only after the root cause is supported.
+
+The **Sandbox Executor** and **Verifier** are deterministic software components, not autonomous or model-driven agents. Human approval is a security boundary, not an agent. TraceRoot uses models for constrained judgment and ordinary code for enforcement and verification.
 
 ## Safety boundaries
 
@@ -115,7 +128,7 @@ Test totals are evidence from named runs, not invented status indicators.
 | Path | Responsibility |
 | --- | --- |
 | `traceroot/autonomous_monitor.py` | Telemetry, detection, correlation, deduplication, audit handoff |
-| `traceroot/agents/` | Investigator, Auditor, planner, approval, executor, verifier |
+| `traceroot/agents/` | Three AI roles plus deterministic approval, execution, and verification components |
 | `traceroot/runtime_connectors.py` | Credential-reference gateway and redaction |
 | `traceroot/workspace_events.py` | Durable incident/event journal |
 | `traceroot/tools/` | Bounded read-only evidence tools |
@@ -125,7 +138,7 @@ Test totals are evidence from named runs, not invented status indicators.
 
 ## Known limitations
 
-- One live Auditor call remains for the EduForge partial-success incident.
+- Recovery verification for the EduForge incident remains pending because no remediation has been approved or applied.
 - Azure logs and distributed traces are not retained because the deployed app has no Log Analytics diagnostic routing.
 - RAG and tool signals need first-class normalization when the application exports those spans.
 - EduForge metrics currently reset on application restart.

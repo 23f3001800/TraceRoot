@@ -255,7 +255,7 @@ class AutonomousMonitor:
         incident.update({"status": "AUDITED" if reply.decision["verdict"] == "SUPPORTED" else "NEEDS_EVIDENCE",
                          "audit": reply.decision, "signals": signals,
                          "remediation": {"status": "REQUIRES_HUMAN_APPROVAL", "executed": False,
-                                         "proposal": "Retry only the failed checkpoint after provider health is confirmed."}})
+                                         "proposal": remediation_proposal(signals)}})
         self.store.save(incident)
         self.store._emit("remediation.proposed", incident["remediation"], iid, "Remediation")
         return {"status": "audited", "incident_id": iid, "audit": reply.decision,
@@ -269,4 +269,15 @@ class AutonomousMonitor:
             time.sleep(interval_seconds)
 
 
-__all__ = ["AutonomousMonitor", "EduForgeTelemetryClient", "MonitorConfig", "correlate", "detect", "parse_prometheus"]
+def remediation_proposal(signals: list[dict[str, Any]]) -> str:
+    warnings = " ".join(str(item.get("warning", "")) for item in signals)
+    if "low confidence: grade_band" in warnings:
+        return ("Add an approval-gated low-confidence grade-band fallback or human-review gate, "
+                "then retry only the educational-classification checkpoint and verify the job no longer finishes partial.")
+    if any(item.get("kind") == "provider" for item in signals):
+        return "After approval, retry only the failed checkpoint after provider health is confirmed."
+    return "Collect the missing component evidence before proposing a write or retry."
+
+
+__all__ = ["AutonomousMonitor", "EduForgeTelemetryClient", "MonitorConfig", "correlate", "detect",
+           "parse_prometheus", "remediation_proposal"]

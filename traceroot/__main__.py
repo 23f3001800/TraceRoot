@@ -76,7 +76,9 @@ def main():
                                    watched_job_ids=tuple(args.job_id))
             service = AutonomousMonitor(config, EduForgeTelemetryClient(config),
                 IncidentStore(args.workspace_dir.resolve()), args.state_file.resolve(),
-                load_provider(args.env_file, LLMConfig()))
+                load_provider(args.env_file, LLMConfig(max_tokens=1024, temperature=0.1,
+                                                       thinking_budget=0,
+                                                       max_transient_retries=0)))
             if args.interval:
                 service.run_forever(args.interval)
                 return 0

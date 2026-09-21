@@ -1,0 +1,66 @@
+diff --git a/backend/stages/s2_classification/stage.py b/backend/stages/s2_classification/stage.py
+index 335f911..808e963 100644
+--- a/backend/stages/s2_classification/stage.py
++++ b/backend/stages/s2_classification/stage.py
+@@ -22,6 +22,7 @@ the whole document would cost tokens for no accuracy.
+ from __future__ import annotations
+ 
+ import json
++import re
+ from typing import Any
+ 
+ from contracts.classification import Classification
+@@ -32,6 +33,9 @@ from stages.base import StageContext, stage_span
+ __all__ = ["DEGRADED_CLASSIFICATION", "ClassificationStage", "build_sample"]
+ 
+ MAX_SAMPLE_CHARS = 6000
++_EXPLICIT_GRADE = re.compile(
++    r"\b(?:grade|class|year)\s*(?:level\s*)?([Kk]|[1-9]|1[0-2])(?:\s*(?:-|\u2013|\u2014|to)\s*([1-9]|1[0-2]))?\b"
++)
+ 
+ 
+ def _degraded_classification() -> Classification:
+@@ -155,6 +159,32 @@ def build_sample(structured_document: dict[str, Any], limit: int = MAX_SAMPLE_CH
+     return "\n".join(parts)
+ 
+ 
++def resolve_low_confidence_grade(
++    classification: Classification, sample: str
++) -> tuple[Classification, str | None]:
++    """Use explicit source evidence for a weak grade guess, otherwise abstain."""
++    if classification.confidences.get("grade_band", 0.0) >= 0.5:
++        return classification, None
++
++    grades = set()
++    for start, end in _EXPLICIT_GRADE.findall(sample):
++        first = start.upper()
++        grades.add(f"{first}-{end}" if end else first)
++
++    data = classification.model_dump(mode="json")
++    confidences = dict(data.get("confidences") or {})
++    if len(grades) == 1:
++        data["grade_band"] = grades.pop()
++        confidences["grade_band"] = 0.99
++        reason = "recovered from one explicit grade label in the source"
++    else:
++        data["grade_band"] = "Unknown"
++        confidences["grade_band"] = 0.0
++        reason = "abstained because the source has no unique explicit grade label"
++    data["confidences"] = confidences
++    return Classification.model_validate(data), reason
++
++
+ class ClassificationStage:
+     """Replaces the stage-2 stub."""
+ 
+@@ -185,6 +215,10 @@ class ClassificationStage:
+             )
+ 
+             classification = result.value
++            classification, grade_reason = resolve_low_confidence_grade(classification, sample)
++            if grade_reason:
++                span.decide("low-confidence grade-band handling", grade_reason)
++
+             if result.degraded:
+                 span.warn(
+                     "classification degraded; pedagogy_profile set to 'mixed' and every "

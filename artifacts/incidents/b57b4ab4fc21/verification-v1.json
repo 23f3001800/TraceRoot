@@ -1,0 +1,22 @@
+{
+  "incident_id": "b57b4ab4fc21",
+  "patch_sha256": "52e01708935bd7c6facca01efc49941034836b1d371df252c18014b1d3b80e0c",
+  "status": "REPRODUCTION_STILL_FAILS",
+  "baseline": {
+    "passed": 0,
+    "total": 3,
+    "accuracy": 0.0
+  },
+  "post_patch": {
+    "passed": 1,
+    "total": 3,
+    "accuracy": 0.3333333333333333
+  },
+  "resolved_cases": ["ambiguous input safely abstains as Unknown"],
+  "remaining_failures": [
+    "Grade 9 label was not recovered",
+    "Class 10 label was not recovered"
+  ],
+  "diagnosis": "The explicit-grade regular expression is case-sensitive and does not match title-case Grade or Class labels.",
+  "production_changed": false
+}

@@ -1,0 +1,6 @@
+FROM traceroot-investigation:eduforgeb57b-patch-52e01708935b
+
+USER root
+RUN pip install --no-cache-dir pytest==8.3.5 pytest-asyncio==0.24.0
+COPY traceroot-runtime/ /opt/traceroot/
+USER 10001:10001

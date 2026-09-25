@@ -69,4 +69,10 @@ async def evaluate() -> dict[str, Any]:
             "cases": results}
 
 
-print(json.dumps(asyncio.run(evaluate()), indent=2, sort_keys=True))
+def test_low_confidence_grade_resolution_quality() -> None:
+    result = asyncio.run(evaluate())
+    assert result["passed"] == result["total"], json.dumps(result, sort_keys=True)
+
+
+if __name__ == "__main__":
+    print(json.dumps(asyncio.run(evaluate()), indent=2, sort_keys=True))

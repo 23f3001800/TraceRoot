@@ -33,6 +33,9 @@ def checked(context, args, timeout=30, input_bytes=None):
     return result
 
 def container_options(context, name: str) -> list[str]:
+    pythonpath = context.config.get("pythonpath", "/repo:/opt/traceroot")
+    if pythonpath not in {"/repo:/opt/traceroot", "/repo/backend:/opt/traceroot"}:
+        raise ToolFailure("environment_denied", "Unsupported sandbox Python path.")
     return [
         "--name", name, "--label", f"traceroot.session={context.config['id']}",
         "--pull", "never", "--network", context.config["network"],
@@ -41,7 +44,7 @@ def container_options(context, name: str) -> list[str]:
         "--cpus", "1", "--pids-limit", "64",
         "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
         "--workdir", "/repo", "--env", "PYTHONDONTWRITEBYTECODE=1",
-        "--env", "PYTHONPATH=/repo:/opt/traceroot",
+        "--env", f"PYTHONPATH={pythonpath}",
         "--env", "PYTEST_DISABLE_PLUGIN_AUTOLOAD=1",
     ]
 

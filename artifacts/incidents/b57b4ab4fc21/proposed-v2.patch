@@ -1,0 +1,10 @@
+diff --git a/backend/stages/s2_classification/stage.py b/backend/stages/s2_classification/stage.py
+--- a/backend/stages/s2_classification/stage.py
++++ b/backend/stages/s2_classification/stage.py
+@@ -34,4 +34,5 @@ __all__ = ["DEGRADED_CLASSIFICATION", "ClassificationStage", "build_sample"]
+ MAX_SAMPLE_CHARS = 6000
+ _EXPLICIT_GRADE = re.compile(
+-    r"\b(?:grade|class|year)\s*(?:level\s*)?([Kk]|[1-9]|1[0-2])(?:\s*(?:-|\u2013|\u2014|to)\s*([1-9]|1[0-2]))?\b"
++    r"\b(?:grade|class|year)\s*(?:level\s*)?([Kk]|[1-9]|1[0-2])(?:\s*(?:-|\u2013|\u2014|to)\s*([1-9]|1[0-2]))?\b",
++    re.IGNORECASE,
+ )

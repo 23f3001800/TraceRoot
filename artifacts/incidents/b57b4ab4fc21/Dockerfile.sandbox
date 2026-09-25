@@ -1,0 +1,14 @@
+FROM traceroot-eduforge-baseline:9f46478f
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /repo
+COPY backend/ backend/
+COPY config/ config/
+COPY evaluation/ evaluation/
+
+ENV PYTHONPATH=/repo/backend
+USER 10001:10001

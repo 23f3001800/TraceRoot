@@ -1,0 +1,11 @@
+diff --git a/backend/stages/s2_classification/stage.py b/backend/stages/s2_classification/stage.py
+--- a/backend/stages/s2_classification/stage.py
++++ b/backend/stages/s2_classification/stage.py
+@@ -164,5 +164,6 @@ def resolve_low_confidence_grade(
+     classification: Classification, sample: str
+ ) -> tuple[Classification, str | None]:
+     """Use explicit source evidence for a weak grade guess, otherwise abstain."""
+-    if classification.confidences.get("grade_band", 0.0) >= 0.5:
++    grade_confidence = classification.confidences.get("grade_band")
++    if grade_confidence is None or grade_confidence >= 0.5:
+         return classification, None

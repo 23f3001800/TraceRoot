@@ -36,11 +36,14 @@ def container_options(context, name: str) -> list[str]:
     pythonpath = context.config.get("pythonpath", "/repo:/opt/traceroot")
     if pythonpath not in {"/repo:/opt/traceroot", "/repo/backend:/opt/traceroot"}:
         raise ToolFailure("environment_denied", "Unsupported sandbox Python path.")
+    memory = context.config.get("memory", "256m")
+    if memory not in {"256m", "512m", "1g"}:
+        raise ToolFailure("environment_denied", "Unsupported sandbox memory limit.")
     return [
         "--name", name, "--label", f"traceroot.session={context.config['id']}",
         "--pull", "never", "--network", context.config["network"],
         "--read-only", "--user", "10001:10001", "--cap-drop", "ALL",
-        "--security-opt", "no-new-privileges:true", "--memory", "256m",
+        "--security-opt", "no-new-privileges:true", "--memory", memory,
         "--cpus", "1", "--pids-limit", "64",
         "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
         "--workdir", "/repo", "--env", "PYTHONDONTWRITEBYTECODE=1",

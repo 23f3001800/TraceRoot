@@ -1,0 +1,19 @@
+{
+  "incident_id": "b57b4ab4fc21",
+  "patch_sha256": "2378784d5a8cb5c2c02a17cffd971923a5b55527b0ad7401dde456770ba35ee9",
+  "status": "FOCUSED_TESTS_FAILED",
+  "quality_evaluation": {
+    "passed": 3,
+    "total": 3,
+    "accuracy": 1.0
+  },
+  "focused_tests": {
+    "passed": 48,
+    "failed": 1,
+    "skipped": 0,
+    "failure": "test_low_confidence_fields_are_surfaced_not_swallowed"
+  },
+  "regression_tests": "not_run_after_focused_failure",
+  "diagnosis": "A missing grade_band confidence was treated as zero, changing an unrelated existing classification contract.",
+  "production_changed": false
+}

@@ -10,7 +10,13 @@ def execute_tests(context, args: list[str], timeout: int) -> ToolResult:
         context.repository.read(path)
     run_id = uuid4().hex
     name = f"traceroot-test-{run_id[:12]}"
-    argv = ["python", "-m", "pytest", "-p", "reporter", "-p", "no:cacheprovider",
+    plugins = context.config.get("pytest_plugins", [])
+    if not isinstance(plugins, list) or any(plugin not in {"pytest_asyncio.plugin"} for plugin in plugins):
+        raise ToolFailure("environment_denied", "Unsupported pytest plugin configuration.")
+    plugin_args = [item for plugin in plugins for item in ("-p", plugin)]
+    if "pytest_asyncio.plugin" in plugins:
+        plugin_args.append("--asyncio-mode=auto")
+    argv = ["python", "-m", "pytest", "-p", "reporter", "-p", "no:cacheprovider", *plugin_args,
             "-c", "/opt/traceroot/pytest.ini", "--rootdir=/repo", "-q", "--tb=short", "--show-capture=no", *args]
     start = utc_now()
     data = {"command": argv, "exit_code": None, "stdout": "", "stderr": "", "duration_ms": 0,

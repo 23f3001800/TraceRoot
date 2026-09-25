@@ -1,0 +1,15 @@
+{
+  "incident_id": "b57b4ab4fc21",
+  "patch_sha256": "878b6f642833e4a63ea3d44597b1b3047adfd01835d697987955d1406ce8d6ce",
+  "status": "FIX_VERIFIED",
+  "quality_evaluation": {
+    "baseline": {"passed": 0, "total": 3, "accuracy": 0.0},
+    "v1": {"passed": 1, "total": 3, "accuracy": 0.3333333333333333},
+    "v3": {"passed": 3, "total": 3, "accuracy": 1.0}
+  },
+  "focused_tests": {"passed": 49, "failed": 0, "skipped": 0},
+  "unit_regression": {"passed": 429, "failed": 0, "skipped": 1, "errors": 0},
+  "recovery": "Low-confidence grade labels are recovered only from unique explicit source evidence; ambiguous inputs safely abstain as Unknown; missing confidence remains unchanged.",
+  "production_changed": false,
+  "pr_created": false
+}

@@ -37,7 +37,9 @@ A controlled authenticated job exercised the real Azure-backed EduForge pipeline
 
 This is a real model-quality degradation, not a fixture: the application completed only partially after reporting low-confidence classification. TraceRoot recognized the transition and warning as correlated application and model evidence, automatically opened incident `b57b4ab4fc21`, and invoked the independent Evidence Auditor once with a 1,024-token output cap, no thinking budget, and no retries.
 
-The Auditor returned **SUPPORTED** with two citations: the application-level `succeeded_partial` observation and the model-level low-confidence classification warning. Remediation remains unexecuted and explicitly requires human approval.
+The Auditor returned **SUPPORTED** with two citations: the application-level `succeeded_partial` observation and the model-level low-confidence classification warning.
+
+The approval-bound remediation was then evaluated entirely in disposable Docker. Low-confidence grade-band resolution improved from **0/3 at baseline**, to **1/3 after the first approved patch**, to **3/3 after the final approved correction**. Deterministic verification returned `FIX_VERIFIED`: all **49 focused classification tests passed**, and the broader unit suite reported **429 passed, 1 skipped, 0 failed**. Production was not changed and no PR was created.
 
 ## Architecture
 
@@ -138,7 +140,7 @@ Test totals are evidence from named runs, not invented status indicators.
 
 ## Known limitations
 
-- Recovery verification for the EduForge incident remains pending because no remediation has been approved or applied.
+- The recovery result is sandbox evidence only; deployment to staging or production remains a separate, explicitly approved action.
 - Azure logs and distributed traces are not retained because the deployed app has no Log Analytics diagnostic routing.
 - RAG and tool signals need first-class normalization when the application exports those spans.
 - EduForge metrics currently reset on application restart.

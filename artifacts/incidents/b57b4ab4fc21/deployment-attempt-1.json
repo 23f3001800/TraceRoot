@@ -1,0 +1,12 @@
+{
+  "action_sha256": "9b2252ba0bada3b80a28fb0c1b436efdf3e8bc50d41b8eeffe2d12402fcdadef",
+  "approval_status": "CONSUMED",
+  "artifact_sha256": "db76135cc0713a1d14ba84dd968ec2aaf5aa89d5429655ac74b0f9d9bb42f098",
+  "attempted_at": "2026-09-27T07:44:04Z",
+  "azure_status": 409,
+  "commit": "530cf31ef774af989e29db1d209372173c86f8bb",
+  "error": "Cannot create staging slot because the site would exceed the number of slots allowed for the Basic SKU.",
+  "production_changed": false,
+  "resource_created": false,
+  "status": "STAGING_SLOT_UNAVAILABLE"
+}

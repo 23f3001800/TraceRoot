@@ -164,12 +164,15 @@ Test totals are evidence from named runs, not invented status indicators.
 ## Known limitations
 
 - The recovery is verified, committed, and published on a bounded branch. The
-  first live staging deployment still requires an exact deployment approval.
+  first approved slot deployment was rejected by Azure before deployment
+  because the current Basic App Service plan permits no additional slots.
 - Azure logs and distributed traces are not retained because the deployed app has no Log Analytics diagnostic routing.
 - RAG and tool signals need first-class normalization when the application exports those spans.
 - EduForge metrics currently reset on application restart.
 - Staging failure containment stops the isolated slot; immutable artifact
   rollback history is not yet implemented.
+- A separate staging Web App or an approved plan upgrade is required before the
+  live staging recovery can be verified.
 - Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.

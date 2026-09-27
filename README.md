@@ -16,6 +16,8 @@ AI applications fail across application code, models, providers, prompts, retrie
 6. Propose the smallest bounded remediation.
 7. Require exact human approval before any write.
 8. Execute only in disposable Docker and verify actual recovery.
+9. Commit and deploy only through separately approved deterministic components.
+10. Verify an isolated staging slot before any production promotion.
 
 ## Live Azure integration
 
@@ -39,30 +41,39 @@ This is a real model-quality degradation, not a fixture: the application complet
 
 The Auditor returned **SUPPORTED** with two citations: the application-level `succeeded_partial` observation and the model-level low-confidence classification warning.
 
-The approval-bound remediation was then evaluated entirely in disposable Docker. Low-confidence grade-band resolution improved from **0/3 at baseline**, to **1/3 after the first approved patch**, to **3/3 after the final approved correction**. Deterministic verification returned `FIX_VERIFIED`: all **49 focused classification tests passed**, and the broader unit suite reported **429 passed, 1 skipped, 0 failed**. Production was not changed and no PR was created.
+The approval-bound remediation was then evaluated entirely in disposable Docker. Low-confidence grade-band resolution improved from **0/3 at baseline**, to **1/3 after the first approved patch**, to **3/3 after the final approved correction**. Deterministic verification returned `FIX_VERIFIED`: all **49 focused classification tests passed**, and the broader unit suite reported **429 passed, 1 skipped, 0 failed**.
+
+The exact verified recovery is committed as `530cf31` on
+`traceroot/b57b4ab4fc21-grade-band-recovery` and published to GitHub. No PR
+was created and production was not changed. The persistent monitor is running
+against Azure and currently reports a healthy deployment with no new signals.
 
 ## Architecture
 
-```mermaid
-flowchart TD
-    A[Deployed AI application]
-    B[Read-only monitoring]
-    C[Automatic incident]
-    D[Investigator and evidence tools]
-    E[Independent Evidence Auditor]
-    F[Bounded remediation proposal]
-    G{Human approval}
-    H[Disposable Docker execution]
-    I[Deterministic recovery verification]
-
-    A --> B --> C --> D --> E
-    E -->|More evidence needed| D
-    E -->|Root cause supported| F --> G
-    G -->|Approved| H --> I
-    G -->|Rejected| C
+```text
+DEPLOYED APP          AI DECISIONS                 CONTROLLED RECOVERY
+-------------         -----------------------      ---------------------------
+Health / metrics ---> Investigator              -> Bounded patch
+Jobs / traces    ---> Evidence Auditor          -> Human patch approval
+Cost / latency   ---> Remediation Planner       -> Disposable Docker
+                            ^                      Deterministic verification
+                            |                                |
+                    insufficient evidence          Human commit approval
+                                                             |
+                                                   Recovery branch + CI
+                                                             |
+                                                   Human deploy approval
+                                                             |
+                                                   Isolated staging slot
+                                                             |
+                                                   Health + quality checks
+                                                             |
+                                                   Production: still locked
 ```
 
-Monitoring extends the existing incident state machine. It does not add another agent or bypass investigation, audit, approval, execution, or verification boundaries.
+Monitoring extends the existing incident state machine. The executor, verifier,
+Git workflow, and staging deployer are deterministic enforcement components.
+They do not add agents or bypass any approval boundary.
 
 ### Component count
 
@@ -72,7 +83,10 @@ TraceRoot has **three AI decision roles**:
 2. **Evidence Auditor** — judges only supplied evidence and has no tools.
 3. **Remediation Planner** — proposes a bounded change only after the root cause is supported.
 
-The **Sandbox Executor** and **Verifier** are deterministic software components, not autonomous or model-driven agents. Human approval is a security boundary, not an agent. TraceRoot uses models for constrained judgment and ordinary code for enforcement and verification.
+The **Sandbox Executor**, **Verifier**, **Git workflow**, and **Staging
+Deployer** are deterministic software components, not autonomous or model-driven
+agents. Human approval is a security boundary, not an agent. TraceRoot uses
+models for constrained judgment and ordinary code for enforcement.
 
 ## Safety boundaries
 
@@ -85,6 +99,10 @@ The **Sandbox Executor** and **Verifier** are deterministic software components,
 - Approved changes run only in a disposable Docker environment.
 - Recovery requires the original reproduction and regression suite to pass.
 - Target commits and PR preparation require separately bound approvals.
+- Deployment approval is bound to the verified commit, exact ZIP hash, CI
+  result, Azure application, staging slot, and HTTPS verification endpoints.
+- The deployer accepts only named non-production slots. Failed staging health
+  verification stops that slot and leaves production unchanged.
 
 ## Run
 
@@ -135,6 +153,7 @@ Test totals are evidence from named runs, not invented status indicators.
 | --- | --- |
 | `traceroot/autonomous_monitor.py` | Telemetry, detection, correlation, deduplication, audit handoff |
 | `traceroot/agents/` | Three AI roles plus deterministic approval, execution, and verification components |
+| `traceroot/agents/staging_deployer.py` | Approval-bound Azure staging deployment and failure containment |
 | `traceroot/runtime_connectors.py` | Credential-reference gateway and redaction |
 | `traceroot/workspace_events.py` | Durable incident/event journal |
 | `traceroot/tools/` | Bounded read-only evidence tools |
@@ -144,11 +163,14 @@ Test totals are evidence from named runs, not invented status indicators.
 
 ## Known limitations
 
-- The recovery result is sandbox evidence only; deployment to staging or production remains a separate, explicitly approved action.
+- The recovery is verified, committed, and published on a bounded branch. The
+  first live staging deployment still requires an exact deployment approval.
 - Azure logs and distributed traces are not retained because the deployed app has no Log Analytics diagnostic routing.
 - RAG and tool signals need first-class normalization when the application exports those spans.
 - EduForge metrics currently reset on application restart.
-- Recovery should be proven on a dedicated staging deployment before production remediation is enabled.
+- Staging failure containment stops the isolated slot; immutable artifact
+  rollback history is not yet implemented.
+- Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.
 

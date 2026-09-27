@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import hashlib
 from pathlib import Path
 import re
+from time import sleep
 from typing import Callable
 from urllib.request import Request, urlopen
 
@@ -71,6 +72,7 @@ def deploy_verified_staging(
     *,
     runner: Callable[..., ProcessResult] = run_process,
     probe: Callable[[str], bool] = _default_probe,
+    wait: Callable[[float], None] = sleep,
 ) -> dict:
     if request.slot not in _SAFE_SLOTS:
         raise ToolFailure("production_denied", "Only an isolated staging slot is allowed.")
@@ -119,7 +121,16 @@ def deploy_verified_staging(
     if deployed.exit_code or deployed.timed_out:
         raise ToolFailure("deployment_failed", "Approved staging deployment failed.", "error")
 
-    healthy = all(probe(url) for url in request.health_urls)
+    healthy = False
+    for attempt in range(6):
+        try:
+            healthy = all(probe(url) for url in request.health_urls)
+        except OSError:
+            healthy = False
+        if healthy:
+            break
+        if attempt < 5:
+            wait(5)
     if not healthy:
         runner(["az", "webapp", "stop", "--resource-group", request.resource_group,
                 "--name", request.app_name, "--slot", request.slot], 120)

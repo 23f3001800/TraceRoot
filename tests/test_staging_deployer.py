@@ -46,7 +46,7 @@ def test_deploys_only_approved_verified_staging(context, tmp_path):
     req = request(tmp_path); approve(context, req); calls = []
     output = deploy_verified_staging(
         context, req, runner=lambda argv, timeout: calls.append(argv) or result(),
-        probe=lambda url: True,
+        probe=lambda url: True, wait=lambda seconds: None,
     )
     assert output["status"] == "STAGING_VERIFIED"
     assert calls[0][0:5] == ["az", "webapp", "deployment", "slot", "create"]
@@ -58,7 +58,7 @@ def test_failed_healthcheck_stops_isolated_slot(context, tmp_path):
     req = request(tmp_path); approve(context, req); calls = []
     output = deploy_verified_staging(
         context, req, runner=lambda argv, timeout: calls.append(argv) or result(),
-        probe=lambda url: False,
+        probe=lambda url: False, wait=lambda seconds: None,
     )
     assert output["status"] == "STAGING_VERIFICATION_FAILED"
     assert calls[-1][0:3] == ["az", "webapp", "stop"]

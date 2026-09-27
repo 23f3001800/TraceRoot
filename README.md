@@ -109,6 +109,10 @@ python3 -m traceroot monitor \
 
 Add `--job-id JOB_UUID` to watch a deployed job. Other operator entry points:
 
+For a hardened long-running container with a persistent cursor and automatic
+process restart, use the [monitor Compose deployment](deploy/monitor/README.md).
+The host remains responsible for starting the Docker daemon.
+
 ```bash
 python3 -m traceroot prepare --repository TARGET_REPOSITORY --docker "$(command -v docker)"
 python3 -m traceroot investigate --session SESSION --task-file task.json --env-file .env

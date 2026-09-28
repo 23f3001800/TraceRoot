@@ -1,0 +1,26 @@
+{
+  "action_sha256": "668ade069d54049fdf1de52e4614204e014ae5613e01062131a9d686649f2878",
+  "approval_status": "CONSUMED",
+  "artifact_sha256": "db76135cc0713a1d14ba84dd968ec2aaf5aa89d5429655ac74b0f9d9bb42f098",
+  "azure_deployment_id": "3cf3367f-2730-4f92-a866-f051ec193fa4",
+  "azure_deployment_status": 4,
+  "healthz": {
+    "status": "ok"
+  },
+  "production_changed": false,
+  "quality_job": {
+    "cost_usd": 0.0,
+    "error": "CassetteMiss",
+    "job_id": "fdb349d6-413e-42d2-a2f6-ed92e6b49110",
+    "stage": "educational-classification",
+    "status": "failed",
+    "tokens": 0
+  },
+  "quality_recovery_verified": false,
+  "readyz": {
+    "llm_profile": "ci",
+    "schema_version": "1.0.0",
+    "status": "ok"
+  },
+  "status": "STAGING_RUNTIME_HEALTHY_QUALITY_UNVERIFIED"
+}

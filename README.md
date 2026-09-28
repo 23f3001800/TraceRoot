@@ -50,25 +50,23 @@ against Azure and currently reports a healthy deployment with no new signals.
 
 ## Architecture
 
-```text
-DEPLOYED APP          AI DECISIONS                 CONTROLLED RECOVERY
--------------         -----------------------      ---------------------------
-Health / metrics ---> Investigator              -> Bounded patch
-Jobs / traces    ---> Evidence Auditor          -> Human patch approval
-Cost / latency   ---> Remediation Planner       -> Disposable Docker
-                            ^                      Deterministic verification
-                            |                                |
-                    insufficient evidence          Human commit approval
-                                                             |
-                                                   Recovery branch + CI
-                                                             |
-                                                   Human deploy approval
-                                                             |
-                                                   Isolated staging slot
-                                                             |
-                                                   Health + quality checks
-                                                             |
-                                                   Production: still locked
+```mermaid
+flowchart TB
+    A[Deployed app telemetry] --> B[Monitor and automatic incident]
+    B --> C[Investigator]
+    C --> D[Evidence Auditor]
+    D -->|insufficient| C
+    D -->|supported| E[Remediation Planner]
+    E --> F{Patch approval}
+    F -->|approved| G[Disposable sandbox]
+    G --> H[Deterministic verifier]
+    H --> I{Commit approval}
+    I --> J[Recovery branch and CI]
+    J --> K{Deploy approval}
+    K --> L[Isolated staging]
+    L --> M{Health and quality}
+    M -->|failed| N[Stop staging]
+    M -->|verified| O[Production remains locked]
 ```
 
 Monitoring extends the existing incident state machine. The executor, verifier,
@@ -172,10 +170,10 @@ Test totals are evidence from named runs, not invented status indicators.
 - Staging failure containment stops the isolated slot; immutable artifact
   rollback history is not yet implemented.
 - The isolated `eduforge-ai-staging` Web App was created with the bounded replay
-  profile. The latest Azure deployment succeeded, but runtime verification found
-  that the Oryx environment was not activated (`uvicorn` was unavailable).
-  TraceRoot stopped staging and did not claim recovery; the corrected,
-  configuration-bound retry remains separately approval-gated.
+  profile. The corrected Azure deployment and runtime health checks succeeded.
+  The staging classification job reached the repaired checkpoint but replay
+  verification stopped on a missing cassette, so staging quality recovery is
+  not yet claimed.
 - Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.

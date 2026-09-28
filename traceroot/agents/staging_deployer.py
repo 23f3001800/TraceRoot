@@ -35,6 +35,10 @@ class StagingDeploymentRequest:
     ci_status: str
     health_urls: tuple[str, ...]
     create_slot: bool = False
+    target_kind: str = "slot"
+    service_plan: str | None = None
+    app_settings: tuple[str, ...] = ()
+    startup_command: str | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -47,7 +51,7 @@ def _sha256(path: Path) -> str:
 
 def action_payload(request: StagingDeploymentRequest) -> dict:
     artifact = Path(request.artifact).resolve()
-    return {
+    payload = {
         "resource_group": request.resource_group,
         "app_name": request.app_name,
         "slot": request.slot,
@@ -58,6 +62,14 @@ def action_payload(request: StagingDeploymentRequest) -> dict:
         "health_urls": list(request.health_urls),
         "create_slot": request.create_slot,
     }
+    if request.target_kind != "slot":
+        payload.update(
+            target_kind=request.target_kind,
+            service_plan=request.service_plan,
+            app_settings=list(request.app_settings),
+            startup_command=request.startup_command,
+        )
+    return payload
 
 
 def _default_probe(url: str) -> bool:
@@ -74,8 +86,18 @@ def deploy_verified_staging(
     probe: Callable[[str], bool] = _default_probe,
     wait: Callable[[float], None] = sleep,
 ) -> dict:
-    if request.slot not in _SAFE_SLOTS:
-        raise ToolFailure("production_denied", "Only an isolated staging slot is allowed.")
+    if request.target_kind == "slot":
+        if request.slot not in _SAFE_SLOTS:
+            raise ToolFailure("production_denied", "Only an isolated staging slot is allowed.")
+    elif request.target_kind == "app":
+        if not request.app_name.endswith("-staging") or not request.service_plan or not _NAME.fullmatch(request.service_plan):
+            raise ToolFailure("production_denied", "A separate target must be an explicitly named staging app.")
+        if request.app_settings != ("LLM_PROFILE=ci", "SCM_DO_BUILD_DURING_DEPLOYMENT=true"):
+            raise ToolFailure("configuration_denied", "The isolated staging profile must use bounded replay settings.")
+        if request.startup_command != "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --app-dir backend":
+            raise ToolFailure("configuration_denied", "The staging startup command is not approved.")
+    else:
+        raise ToolFailure("target_denied", "Unknown staging target kind.")
     if not _NAME.fullmatch(request.resource_group) or not _NAME.fullmatch(request.app_name):
         raise ToolFailure("target_denied", "Azure target names are invalid.")
     if request.verification.get("status") != "FIX_VERIFIED":
@@ -106,18 +128,40 @@ def deploy_verified_staging(
         raise ToolFailure("approval_scope_mismatch", "Approval does not cover this exact staging deployment.")
 
     consume_deployment_approval(context, request.approval_id)
-    base = ["az", "webapp", "deployment", "slot"]
-    if request.create_slot:
-        created = runner(base + ["create", "--resource-group", request.resource_group,
-                         "--name", request.app_name, "--slot", request.slot], 180)
+    if request.create_slot and request.target_kind == "slot":
+        created = runner(["az", "webapp", "deployment", "slot", "create",
+                          "--resource-group", request.resource_group,
+                          "--name", request.app_name, "--slot", request.slot], 180)
         if created.exit_code or created.timed_out:
             raise ToolFailure("slot_creation_failed", "Approved staging slot creation failed.", "error")
-    deployed = runner(
-        ["az", "webapp", "deploy", "--resource-group", request.resource_group,
-         "--name", request.app_name, "--slot", request.slot, "--type", "zip",
-         "--src-path", str(artifact), "--clean", "true", "--restart", "true"],
-        900,
-    )
+    elif request.create_slot:
+        created = runner(["az", "webapp", "create", "--resource-group", request.resource_group,
+                          "--plan", request.service_plan, "--name", request.app_name,
+                          "--runtime", "PYTHON:3.12", "--https-only", "true"], 300)
+        if created.exit_code or created.timed_out:
+            raise ToolFailure("app_creation_failed", "Approved staging app creation failed.", "error")
+        configured = runner(
+            ["az", "webapp", "config", "appsettings", "set",
+             "--resource-group", request.resource_group, "--name", request.app_name,
+             "--settings", *request.app_settings],
+            180,
+        )
+        startup = runner(
+            ["az", "webapp", "config", "set", "--resource-group", request.resource_group,
+             "--name", request.app_name, "--startup-file", request.startup_command],
+            180,
+        )
+        if configured.exit_code or configured.timed_out or startup.exit_code or startup.timed_out:
+            runner(["az", "webapp", "stop", "--resource-group", request.resource_group,
+                    "--name", request.app_name], 120)
+            raise ToolFailure("app_configuration_failed", "Approved staging configuration failed.", "error")
+    deployment = ["az", "webapp", "deploy", "--resource-group", request.resource_group,
+                  "--name", request.app_name]
+    if request.target_kind == "slot":
+        deployment += ["--slot", request.slot]
+    deployment += ["--type", "zip", "--src-path", str(artifact),
+                   "--clean", "true", "--restart", "true"]
+    deployed = runner(deployment, 900)
     if deployed.exit_code or deployed.timed_out:
         raise ToolFailure("deployment_failed", "Approved staging deployment failed.", "error")
 
@@ -132,8 +176,11 @@ def deploy_verified_staging(
         if attempt < 5:
             wait(5)
     if not healthy:
-        runner(["az", "webapp", "stop", "--resource-group", request.resource_group,
-                "--name", request.app_name, "--slot", request.slot], 120)
+        stop = ["az", "webapp", "stop", "--resource-group", request.resource_group,
+                "--name", request.app_name]
+        if request.target_kind == "slot":
+            stop += ["--slot", request.slot]
+        runner(stop, 120)
         return {"status": "STAGING_VERIFICATION_FAILED", "slot": request.slot,
                 "commit": request.commit, "contained": True, "production_changed": False}
     return {"status": "STAGING_VERIFIED", "slot": request.slot, "commit": request.commit,

@@ -74,3 +74,23 @@ def test_rejects_production_and_missing_approval(context, tmp_path):
     with pytest.raises(ToolFailure) as error:
         deploy_verified_staging(context, req)
     assert error.value.code == "approval_unknown"
+
+
+def test_creates_separate_staging_app_on_existing_plan(context, tmp_path):
+    base = request(tmp_path)
+    req = StagingDeploymentRequest(**{
+        **base.__dict__, "app_name": "eduforge-ai-staging", "slot": "none",
+        "target_kind": "app", "service_plan": "eduforge-plan",
+        "app_settings": ("LLM_PROFILE=ci", "SCM_DO_BUILD_DURING_DEPLOYMENT=true"),
+        "startup_command": "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
+    })
+    approve(context, req); calls = []
+    output = deploy_verified_staging(
+        context, req, runner=lambda argv, timeout: calls.append(argv) or result(),
+        probe=lambda url: True, wait=lambda seconds: None,
+    )
+    assert output["status"] == "STAGING_VERIFIED"
+    assert calls[0][0:3] == ["az", "webapp", "create"]
+    assert "--plan" in calls[0] and "eduforge-plan" in calls[0]
+    assert calls[1][0:5] == ["az", "webapp", "config", "appsettings", "set"]
+    assert "--slot" not in calls[3]

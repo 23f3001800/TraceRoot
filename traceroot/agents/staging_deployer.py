@@ -39,6 +39,7 @@ class StagingDeploymentRequest:
     service_plan: str | None = None
     app_settings: tuple[str, ...] = ()
     startup_command: str | None = None
+    azure_timeout_ms: int | None = None
 
 
 def _sha256(path: Path) -> str:
@@ -69,6 +70,8 @@ def action_payload(request: StagingDeploymentRequest) -> dict:
             app_settings=list(request.app_settings),
             startup_command=request.startup_command,
         )
+        if request.azure_timeout_ms is not None:
+            payload["azure_timeout_ms"] = request.azure_timeout_ms
     return payload
 
 
@@ -104,6 +107,8 @@ def deploy_verified_staging(
         raise ToolFailure("verification_required", "Deployment requires FIX_VERIFIED.")
     if request.ci_status != "PASSED":
         raise ToolFailure("ci_required", "Deployment requires passing deterministic CI.")
+    if request.azure_timeout_ms is not None and not 300000 <= request.azure_timeout_ms <= 1200000:
+        raise ToolFailure("timeout_denied", "Azure deployment timeout must be five to twenty minutes.")
     if not re.fullmatch(r"[0-9a-f]{40}", request.commit):
         raise ToolFailure("commit_denied", "Deployment requires an exact Git commit.")
     artifact = Path(request.artifact).resolve()
@@ -161,7 +166,10 @@ def deploy_verified_staging(
         deployment += ["--slot", request.slot]
     deployment += ["--type", "zip", "--src-path", str(artifact),
                    "--clean", "true", "--restart", "true"]
-    deployed = runner(deployment, 900)
+    if request.azure_timeout_ms is not None:
+        deployment += ["--timeout", str(request.azure_timeout_ms)]
+    process_timeout = max(900, ((request.azure_timeout_ms or 840000) // 1000) + 60)
+    deployed = runner(deployment, process_timeout)
     if deployed.exit_code or deployed.timed_out:
         stop = ["az", "webapp", "stop", "--resource-group", request.resource_group,
                 "--name", request.app_name]

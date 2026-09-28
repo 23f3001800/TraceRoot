@@ -112,3 +112,22 @@ def test_failed_deployment_stops_separate_staging_app(context, tmp_path):
         deploy_verified_staging(context, req, runner=runner, wait=lambda seconds: None)
     assert error.value.code == "deployment_failed"
     assert calls[-1][0:3] == ["az", "webapp", "stop"]
+
+
+def test_passes_approved_azure_deployment_timeout(context, tmp_path):
+    base = request(tmp_path)
+    req = StagingDeploymentRequest(**{
+        **base.__dict__, "app_name": "eduforge-ai-staging", "slot": "none",
+        "target_kind": "app", "service_plan": "eduforge-plan", "create_slot": False,
+        "app_settings": ("LLM_PROFILE=ci", "SCM_DO_BUILD_DURING_DEPLOYMENT=true"),
+        "startup_command": "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
+        "azure_timeout_ms": 900000,
+    })
+    approve(context, req); calls = []
+    deploy_verified_staging(
+        context, req, runner=lambda argv, timeout: calls.append((argv, timeout)) or result(),
+        probe=lambda url: True, wait=lambda seconds: None,
+    )
+    deploy_call = calls[0]
+    assert deploy_call[0][-2:] == ["--timeout", "900000"]
+    assert deploy_call[1] == 960

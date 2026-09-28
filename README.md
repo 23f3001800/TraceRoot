@@ -171,8 +171,8 @@ Test totals are evidence from named runs, not invented status indicators.
 - EduForge metrics currently reset on application restart.
 - Staging failure containment stops the isolated slot; immutable artifact
   rollback history is not yet implemented.
-- A separate staging Web App or an approved plan upgrade is required before the
-  live staging recovery can be verified.
+- The isolated `eduforge-ai-staging` Web App now exists with the bounded replay
+  profile, but its artifact deployment has not yet been verified.
 - Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.

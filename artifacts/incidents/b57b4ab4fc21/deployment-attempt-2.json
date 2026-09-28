@@ -1,0 +1,14 @@
+{
+  "action_sha256": "b74242dd1918b9cd86a11d22fd6a36b25eaefb445726cc8b37b8b36326597150",
+  "approval_status": "CONSUMED",
+  "app_name": "eduforge-ai-staging",
+  "artifact_sha256": "db76135cc0713a1d14ba84dd968ec2aaf5aa89d5429655ac74b0f9d9bb42f098",
+  "configuration": "LLM_PROFILE=ci",
+  "production_changed": false,
+  "resource_created": true,
+  "status": "STAGING_CREATED_DEPLOYMENT_NOT_VERIFIED",
+  "verification": {
+    "healthz": 404,
+    "readyz": "NOT_REACHED"
+  }
+}

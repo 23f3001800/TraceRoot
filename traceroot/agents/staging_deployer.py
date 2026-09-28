@@ -20,6 +20,12 @@ from .approval import (
 
 _NAME = re.compile(r"[a-z0-9][a-z0-9-]{1,58}[a-z0-9]$")
 _SAFE_SLOTS = frozenset({"staging", "traceroot-recovery"})
+_REPLAY_SETTINGS = (
+    "ENABLE_ORYX_BUILD=true",
+    "LLM_PROFILE=ci",
+    "PYTHONPATH=/home/site/wwwroot/backend",
+    "SCM_DO_BUILD_DURING_DEPLOYMENT=true",
+)
 
 
 @dataclass(frozen=True)
@@ -95,7 +101,7 @@ def deploy_verified_staging(
     elif request.target_kind == "app":
         if not request.app_name.endswith("-staging") or not request.service_plan or not _NAME.fullmatch(request.service_plan):
             raise ToolFailure("production_denied", "A separate target must be an explicitly named staging app.")
-        if request.app_settings != ("LLM_PROFILE=ci", "SCM_DO_BUILD_DURING_DEPLOYMENT=true"):
+        if request.app_settings != _REPLAY_SETTINGS:
             raise ToolFailure("configuration_denied", "The isolated staging profile must use bounded replay settings.")
         if request.startup_command != "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --app-dir backend":
             raise ToolFailure("configuration_denied", "The staging startup command is not approved.")
@@ -145,6 +151,7 @@ def deploy_verified_staging(
                           "--runtime", "PYTHON:3.12", "--https-only", "true"], 300)
         if created.exit_code or created.timed_out:
             raise ToolFailure("app_creation_failed", "Approved staging app creation failed.", "error")
+    if request.target_kind == "app":
         configured = runner(
             ["az", "webapp", "config", "appsettings", "set",
              "--resource-group", request.resource_group, "--name", request.app_name,
@@ -177,6 +184,11 @@ def deploy_verified_staging(
             stop += ["--slot", request.slot]
         runner(stop, 120)
         raise ToolFailure("deployment_failed", "Approved staging deployment failed.", "error")
+    if request.target_kind == "app":
+        started = runner(["az", "webapp", "start", "--resource-group", request.resource_group,
+                          "--name", request.app_name], 120)
+        if started.exit_code or started.timed_out:
+            raise ToolFailure("staging_start_failed", "Deployed staging app could not be started.", "error")
 
     healthy = False
     for attempt in range(6):

@@ -1,0 +1,11 @@
+{
+  "action_sha256": "74404a860e0c594f859955498bd96eefb20e33a3b28970c40ba6c1ac4953c714",
+  "approval_status": "CONSUMED",
+  "azure_deployment_id": "6c2dc5ec-40d5-49bf-92da-433e1940078b",
+  "azure_deployment_status": 4,
+  "contained": true,
+  "production_changed": false,
+  "runtime_error": "No module named uvicorn",
+  "staging_app_state": "Stopped",
+  "status": "DEPLOYED_RUNTIME_VERIFICATION_FAILED"
+}

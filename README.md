@@ -172,9 +172,10 @@ Test totals are evidence from named runs, not invented status indicators.
 - Staging failure containment stops the isolated slot; immutable artifact
   rollback history is not yet implemented.
 - The isolated `eduforge-ai-staging` Web App was created with the bounded replay
-  profile. Azure OneDeploy failed while activating the verified ZIP (status 3,
-  with no reported Oryx build errors), so TraceRoot stopped the staging app and
-  did not claim recovery.
+  profile. The latest Azure deployment succeeded, but runtime verification found
+  that the Oryx environment was not activated (`uvicorn` was unavailable).
+  TraceRoot stopped staging and did not claim recovery; the corrected,
+  configuration-bound retry remains separately approval-gated.
 - Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.

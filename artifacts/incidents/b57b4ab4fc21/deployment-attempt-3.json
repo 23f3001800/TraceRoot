@@ -1,0 +1,15 @@
+{
+  "action_sha256": "ea1214bf7321009b05334294a4659c91701e9be81ed43b1538798be03b908181",
+  "approval_status": "CONSUMED",
+  "app_name": "eduforge-ai-staging",
+  "artifact_sha256": "db76135cc0713a1d14ba84dd968ec2aaf5aa89d5429655ac74b0f9d9bb42f098",
+  "azure_deployment_id": "5094594c-92d3-49a4-8a01-369b621cdeee",
+  "azure_status": 3,
+  "build_errors_reported": 0,
+  "build_warnings_reported": 0,
+  "contained": true,
+  "production_changed": false,
+  "staging_app_state": "Stopped",
+  "status": "STAGING_DEPLOYMENT_FAILED",
+  "verification": "NOT_RUN"
+}

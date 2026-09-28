@@ -163,6 +163,11 @@ def deploy_verified_staging(
                    "--clean", "true", "--restart", "true"]
     deployed = runner(deployment, 900)
     if deployed.exit_code or deployed.timed_out:
+        stop = ["az", "webapp", "stop", "--resource-group", request.resource_group,
+                "--name", request.app_name]
+        if request.target_kind == "slot":
+            stop += ["--slot", request.slot]
+        runner(stop, 120)
         raise ToolFailure("deployment_failed", "Approved staging deployment failed.", "error")
 
     healthy = False

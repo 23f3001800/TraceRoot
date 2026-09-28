@@ -94,3 +94,21 @@ def test_creates_separate_staging_app_on_existing_plan(context, tmp_path):
     assert "--plan" in calls[0] and "eduforge-plan" in calls[0]
     assert calls[1][0:5] == ["az", "webapp", "config", "appsettings", "set"]
     assert "--slot" not in calls[3]
+
+
+def test_failed_deployment_stops_separate_staging_app(context, tmp_path):
+    base = request(tmp_path)
+    req = StagingDeploymentRequest(**{
+        **base.__dict__, "app_name": "eduforge-ai-staging", "slot": "none",
+        "target_kind": "app", "service_plan": "eduforge-plan", "create_slot": False,
+        "app_settings": ("LLM_PROFILE=ci", "SCM_DO_BUILD_DURING_DEPLOYMENT=true"),
+        "startup_command": "python -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --app-dir backend",
+    })
+    approve(context, req); calls = []
+    def runner(argv, timeout):
+        calls.append(argv)
+        return result(1 if argv[0:3] == ["az", "webapp", "deploy"] else 0)
+    with pytest.raises(ToolFailure) as error:
+        deploy_verified_staging(context, req, runner=runner, wait=lambda seconds: None)
+    assert error.value.code == "deployment_failed"
+    assert calls[-1][0:3] == ["az", "webapp", "stop"]

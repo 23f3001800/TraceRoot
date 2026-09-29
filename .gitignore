@@ -32,3 +32,5 @@ docs/runs/
 .traceroot-monitor.json.lock
 deploy/workspace/.env
 deploy/workspace/.azure/
+docs/interview-questions.md
+docs/project-assessment.md

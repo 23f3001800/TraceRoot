@@ -4,9 +4,12 @@
 
 TraceRoot detects failures from production telemetry, correlates evidence across application and AI components, independently audits the proposed root cause, and prepares bounded remediation. Investigation is read-only; source, runtime, and deployment changes require explicit human approval and deterministic verification.
 
-[Homepage runbook](docs/home-runbook.md) | [Limitations roadmap](docs/limitations-roadmap.md) | [Project assessment](docs/project-assessment.md) | [Interview questions](docs/interview-questions.md)
+[Homepage runbook](docs/home-runbook.md) | [Limitations roadmap](docs/limitations-roadmap.md)
 
 The local operator UI is served at http://127.0.0.1:8875/ (root /).
+
+Azure staging sign-in: [Open TraceRoot](https://traceroot-staging-ui.azurewebsites.net/.auth/login/aad?post_login_redirect_uri=%2F). Microsoft Entra protects the site: a signed-out root request returns 401 and the sign-in endpoint redirects to the tenant. A signed-in homepage test is still pending; this hosted UI does not yet have shared durable state or a remote sandbox executor.
+
 
 ![TraceRoot incident workspace home](docs/images/traceroot-home.png)
 

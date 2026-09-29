@@ -280,8 +280,9 @@ class WorkspaceAPI:
         return Handler
 
 
-def serve_workspace(root, port=8875):
+def serve_workspace(root, port=8875, host="127.0.0.1"):
     api = WorkspaceAPI(root)
-    server = ThreadingHTTPServer(("127.0.0.1", port), api.handler(Path(__file__).parents[1] / "ui" / "workspace"))
-    print(f"TraceRoot workspace: http://127.0.0.1:{port}", flush=True)
+    server = ThreadingHTTPServer((host, port), api.handler(Path(__file__).parents[1] / "ui" / "workspace"))
+    display_host = "127.0.0.1" if host == "0.0.0.0" else host
+    print(f"TraceRoot home: http://{display_host}:{port}/", flush=True)
     server.serve_forever()

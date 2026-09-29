@@ -47,6 +47,8 @@ def main():
     workspace_ui = commands.add_parser("workspace-ui", help="Serve the loopback-only incident reporting workspace")
     workspace_ui.add_argument("--workspace-dir", type=Path, default=Path(".traceroot-workspace"))
     workspace_ui.add_argument("--port", type=int, default=8875)
+    workspace_ui.add_argument("--host", default="127.0.0.1",
+                              help="Bind address; keep 127.0.0.1 for a private local workspace")
     monitor = commands.add_parser("monitor", help="Autonomously detect and audit deployed AI incidents")
     monitor.add_argument("--name", default="eduforge-ai")
     monitor.add_argument("--url", required=True)
@@ -65,7 +67,7 @@ def main():
             return 0
         if args.command == "workspace-ui":
             from .workspace_ui import serve_workspace
-            serve_workspace(args.workspace_dir.resolve(), args.port)
+            serve_workspace(args.workspace_dir.resolve(), args.port, args.host)
             return 0
         if args.command == "monitor":
             from .autonomous_monitor import AutonomousMonitor, EduForgeTelemetryClient, MonitorConfig

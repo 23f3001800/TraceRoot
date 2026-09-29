@@ -4,6 +4,11 @@
 
 TraceRoot detects failures from production telemetry, correlates evidence across application and AI components, independently audits the proposed root cause, and prepares bounded remediation. Investigation is read-only; source, runtime, and deployment changes require explicit human approval and deterministic verification.
 
+[Open the homepage runbook](docs/home-runbook.md) · [Limitation-fix roadmap](docs/limitations-roadmap.md) · The operator UI is served at
+`http://127.0.0.1:8875/` (root `/`, not `/dashboard`).
+
+![TraceRoot incident workspace home](docs/images/traceroot-home.png)
+
 ## What it demonstrates
 
 AI applications fail across application code, models, providers, prompts, retrieval, tools, infrastructure, and data. TraceRoot turns those disconnected signals into one evidence-backed workflow:
@@ -166,9 +171,13 @@ The host remains responsible for starting the Docker daemon.
 ```bash
 python3 -m traceroot prepare --repository TARGET_REPOSITORY --docker "$(command -v docker)"
 python3 -m traceroot investigate --session SESSION --task-file task.json --env-file .env
-python3 -m traceroot workspace-ui
+python3 -m traceroot workspace-ui --host 127.0.0.1 --port 8875
 python3 -m traceroot approval-ui --session SESSION --patch-file PATCH --investigation-id ID
 ```
+
+Then open `http://127.0.0.1:8875/`. See the
+[home-page runbook](docs/home-runbook.md) for monitoring, deployment, verification,
+and shutdown instructions.
 
 ## Verification
 

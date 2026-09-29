@@ -42,6 +42,35 @@ def result(code=0):
     return ProcessResult(code, b"", b"", 1, False, False, False)
 
 
+def test_quality_verification_fields_are_approval_bound():
+    payload = {
+        "action": "start_and_verify_existing_staging_deployment",
+        "investigation_id": "incident1",
+        "resource_group": "eduforge-rg",
+        "app_name": "eduforge-ai-staging",
+        "commit": "5" * 40,
+        "artifact_sha256": "a" * 64,
+        "azure_deployment_id": "deployment1",
+        "health_urls": ["https://example.test/healthz"],
+        "quality_input": "physics.pdf",
+        "quality_input_sha256": "b" * 64,
+        "quality_api": "https://example.test/api/v1",
+        "expected_llm_profile": "ci",
+        "max_health_wait_seconds": 180,
+        "max_quality_wait_seconds": 300,
+        "contain_on_failure": True,
+        "production_changed": False,
+    }
+    approved = deployment_action_hash(payload)
+    for key in (
+        "azure_deployment_id", "quality_input_sha256", "quality_api",
+        "expected_llm_profile", "max_health_wait_seconds",
+        "max_quality_wait_seconds", "contain_on_failure",
+    ):
+        changed = {**payload, key: f"changed-{payload[key]}"}
+        assert deployment_action_hash(changed) != approved
+
+
 def test_deploys_only_approved_verified_staging(context, tmp_path):
     req = request(tmp_path); approve(context, req); calls = []
     output = deploy_verified_staging(

@@ -39,6 +39,11 @@ def deployment_action_hash(payload: dict) -> str:
         "target_kind", "service_plan",
         "app_settings", "startup_command",
         "azure_timeout_ms",
+        "action", "investigation_id", "azure_deployment_id",
+        "quality_input", "quality_input_sha256", "quality_api",
+        "expected_llm_profile", "max_health_wait_seconds",
+        "max_quality_wait_seconds", "contain_on_failure",
+        "production_changed",
     }
     bounded = {key: payload[key] for key in sorted(allowed) if key in payload}
     return hashlib.sha256(json.dumps(bounded, sort_keys=True, separators=(",", ":")).encode()).hexdigest()

@@ -4,8 +4,9 @@
 
 TraceRoot detects failures from production telemetry, correlates evidence across application and AI components, independently audits the proposed root cause, and prepares bounded remediation. Investigation is read-only; source, runtime, and deployment changes require explicit human approval and deterministic verification.
 
-[Open the homepage runbook](docs/home-runbook.md) · [Limitation-fix roadmap](docs/limitations-roadmap.md) · The operator UI is served at
-`http://127.0.0.1:8875/` (root `/`, not `/dashboard`).
+[Homepage runbook](docs/home-runbook.md) | [Limitations roadmap](docs/limitations-roadmap.md) | [Project assessment](docs/project-assessment.md) | [Interview questions](docs/interview-questions.md)
+
+The local operator UI is served at http://127.0.0.1:8875/ (root /).
 
 ![TraceRoot incident workspace home](docs/images/traceroot-home.png)
 

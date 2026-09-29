@@ -1,5 +1,6 @@
 """Loopback HTTP actions and one replayable SSE stream for the full workspace."""
 import json
+import os
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -143,9 +144,11 @@ class WorkspaceAPI:
                               "patch_hash": record["patch_hash"], "approved_by": person}, iid, "Approval")
             return {"status": "APPROVED" if approve else "REJECTED"}
 
-    def handler(self, ui_root):
+    def handler(self, ui_root, trusted_hosts=None):
         api = self
         ui_root = ui_root.resolve()
+        allowed_hosts = {"127.0.0.1", "localhost"}
+        allowed_hosts.update(host.strip().lower() for host in (trusted_hosts or ()) if host.strip())
         class Handler(BaseHTTPRequestHandler):
             def reply(self, status, data, kind="application/json"):
                 if not isinstance(data, bytes):
@@ -160,7 +163,8 @@ class WorkspaceAPI:
 
             def trusted(self):
                 host = self.headers.get("Host", "")
-                if host.split(":")[0] not in {"127.0.0.1", "localhost"}:
+                hostname = host.rsplit(":", 1)[0].strip("[]").lower()
+                if hostname not in allowed_hosts:
                     return False
                 origin = self.headers.get("Origin")
                 return not origin or origin in {"http://" + host, "https://" + host}
@@ -282,7 +286,13 @@ class WorkspaceAPI:
 
 def serve_workspace(root, port=8875, host="127.0.0.1"):
     api = WorkspaceAPI(root)
-    server = ThreadingHTTPServer((host, port), api.handler(Path(__file__).parents[1] / "ui" / "workspace"))
+    trusted_hosts = tuple(filter(None, (
+        value.strip() for value in os.environ.get("TRACEROOT_TRUSTED_HOSTS", "").split(",")
+    )))
+    server = ThreadingHTTPServer(
+        (host, port),
+        api.handler(Path(__file__).parents[1] / "ui" / "workspace", trusted_hosts),
+    )
     display_host = "127.0.0.1" if host == "0.0.0.0" else host
     print(f"TraceRoot home: http://{display_host}:{port}/", flush=True)
     server.serve_forever()

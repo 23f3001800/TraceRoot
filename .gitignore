@@ -28,3 +28,7 @@ docs/generated/
 docs/runs/
 .analysis/
 .traceroot-workspace/
+.traceroot-monitor.json
+.traceroot-monitor.json.lock
+deploy/workspace/.env
+deploy/workspace/.azure/

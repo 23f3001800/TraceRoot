@@ -3,3 +3,5 @@ google-genai==2.22.0
 jsonschema==4.25.1
 langgraph==1.2.11
 websockets==16.1.1
+crewai==1.15.22
+autogen-agentchat==0.7.5

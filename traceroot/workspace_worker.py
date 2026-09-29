@@ -49,7 +49,7 @@ def prepare_repository(item, root):
 
 def investigate(root, iid, resume=False):
     from .docker_runtime import prepare
-    from .agents.langgraph import investigate_graph
+    from .orchestrator import run_investigation
     store, runs = IncidentStore(root), ActiveRuns(root)
     item = store.get(iid)
     emit = lambda kind, **data: store._emit(kind, data, iid)
@@ -71,7 +71,13 @@ def investigate(root, iid, resume=False):
         run_id = None
     runs.update(iid, status="RUNNING")
     emit("run.resumed" if resume else "run.started", session=context.config["id"])
-    result = investigate_graph(context, task, model, progress=WorkspaceProgress(root, iid), resume_run_id=run_id)
+    orchestrator = item.get("orchestrator", "langgraph")
+    emit("orchestrator.selected", orchestrator=orchestrator)
+    result = run_investigation(
+        orchestrator, context, task, model,
+        progress=WorkspaceProgress(root, iid), resume_run_id=run_id,
+    )
+    result["summary"]["orchestrator"] = orchestrator
     status = result["summary"]["phase"].upper()
     runs.update(iid, status=status, run_id=result["summary"]["run_id"],
                 summary=public(result["summary"]), final=public(result["final"]))

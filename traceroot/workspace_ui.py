@@ -94,9 +94,13 @@ class WorkspaceAPI:
             if not args or (args[0] != "pytest" and args[:3] != ["python", "-m", "pytest"]):
                 raise ValueError("Reproduction supports bounded pytest commands only.")
 
-    def start_investigation(self, repository, report, reproduction="", runtime="", incident_id=""):
+    def start_investigation(self, repository, report, reproduction="", runtime="", incident_id="", orchestrator="langgraph"):
+        from .orchestrator import validate_orchestrator
         self.validate_input(repository, report, reproduction, runtime)
-        item = self.store.get(incident_id) if incident_id else self.store.create(repository, report, reproduction, runtime)
+        selected = validate_orchestrator(orchestrator)
+        item = self.store.get(incident_id) if incident_id else self.store.create(
+            repository, report, reproduction, runtime, selected
+        )
         self.launch(item["id"], "investigate")
         return item
 
@@ -170,7 +174,9 @@ class WorkspaceAPI:
                     if url.path == "/api/incidents":
                         return self.reply(200, api.payload())
                     if url.path == "/api/capabilities":
+                        from .orchestrator import capabilities
                         return self.reply(200, {"runtime_targets": [], "publish": False,
+                            "orchestrators": capabilities(),
                             "limitations": ["Docker adapter supports pinned Python/FastAPI targets.",
                                            "Configure a runtime target before deployed investigation.",
                                            "External publishing is unavailable until a target and authorization are configured."]})
@@ -229,7 +235,8 @@ class WorkspaceAPI:
                     iid = data.get("incident_id", "")
                     if self.path == "/api/incidents":
                         item = api.store.create(data.get("repository", ""), data.get("report", ""),
-                                                data.get("reproduction_command", ""), data.get("runtime", ""))
+                                                data.get("reproduction_command", ""), data.get("runtime", ""),
+                                                data.get("orchestrator", "langgraph"))
                         return self.reply(201, {"item": item})
                     if self.path == "/api/pricing":
                         rate = validate_pricing(data)
@@ -246,7 +253,8 @@ class WorkspaceAPI:
                             api.launch(iid, "investigate")
                         else:
                             item = api.start_investigation(data.get("repository", ""), data.get("report", ""),
-                                data.get("reproduction_command", ""), data.get("runtime", ""))
+                                data.get("reproduction_command", ""), data.get("runtime", ""),
+                                orchestrator=data.get("orchestrator", "langgraph"))
                         return self.reply(202, {"item": item})
                     action = self.path.removeprefix("/api/")
                     if action in {"messages", "pause", "resume", "stop"}:

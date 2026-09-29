@@ -124,6 +124,14 @@ function buildApp() {
           <label>Runtime or environment <span class="opt">optional</span>
             <input name="runtime" placeholder="staging, Docker, local">
           </label>
+          <label>Orchestrator
+            <select name="orchestrator" id="d-orchestrator">
+              <option value="langgraph">LangGraph — native/default</option>
+              <option value="crewai">CrewAI</option>
+              <option value="autogen">AutoGen</option>
+            </select>
+            <span class="small" id="d-orchestrator-status">All backends use the same bounded tools and approval gates.</span>
+          </label>
           <div class="modal-actions">
             <button class="toolbtn" type="button" id="d-modal-cancel">Cancel</button>
             <button class="toolbtn" type="submit" data-action="save">Save incident</button>

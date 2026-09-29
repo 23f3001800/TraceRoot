@@ -57,7 +57,8 @@ class IncidentStore:
             events = [e for e in events if int(e["id"]) > int(after)]
         return [e for e in events if not investigation_id or e.get("investigation_id") == investigation_id]
 
-    def create(self, repository, report, reproduction_command="", runtime=""):
+    def create(self, repository, report, reproduction_command="", runtime="", orchestrator="langgraph"):
+        from .orchestrator import validate_orchestrator
         for value, limit in ((repository, 1024), (report, 4000), (reproduction_command, 1000), (runtime, 500)):
             if not isinstance(value, str) or len(value) > limit:
                 raise ValueError("Invalid incident input.")
@@ -65,6 +66,7 @@ class IncidentStore:
             raise ValueError("Provide a report and repository or configured runtime.")
         item = {"id": uuid4().hex[:12], "repository": repository.strip(), "report": report.strip(),
                 "reproduction_command": reproduction_command.strip(), "runtime": runtime.strip(),
+                "orchestrator": validate_orchestrator(orchestrator),
                 "status": "REPORTED", "created_at": datetime.now(timezone.utc).isoformat()}
         self.save(item)
         self._emit("incident.reported", {"incident": item}, item["id"], "Incident intake")

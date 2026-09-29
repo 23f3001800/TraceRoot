@@ -53,8 +53,15 @@ against Azure and currently reports a healthy deployment with no new signals.
 ```mermaid
 flowchart TB
     A[Deployed app telemetry] --> B[Monitor and automatic incident]
-    B --> C[Investigator]
-    C --> D[Evidence Auditor]
+    B --> S{Orchestrator selector}
+    S -->|default| LG[LangGraph]
+    S --> CR[CrewAI Flow]
+    S --> AG[AutoGen runtime]
+    LG --> C[Bounded investigation core]
+    CR --> C
+    AG --> C
+    C --> IV[Investigator]
+    IV --> D[Evidence Auditor]
     D -->|insufficient| C
     D -->|supported| E[Remediation Planner]
     E --> F{Patch approval}
@@ -72,6 +79,18 @@ flowchart TB
 Monitoring extends the existing incident state machine. The executor, verifier,
 Git workflow, and staging deployer are deterministic enforcement components.
 They do not add agents or bypass any approval boundary.
+
+### Selectable orchestration
+
+The workspace can start an incident with **LangGraph**, **CrewAI**, or
+**AutoGen**. LangGraph is the native default. CrewAI wraps the bounded core in a
+Flow; AutoGen routes a typed investigation message through a single-threaded
+runtime. All three use the same read-only tools, durable checkpoints, Evidence
+Auditor, approval records, cost/latency events, sandbox executor, and verifier.
+An unavailable optional backend is disabled in the UI and rejected by the API;
+TraceRoot never silently falls back to a different orchestrator.
+
+These are three orchestration engines, not three additional AI agents.
 
 ### Component count
 
@@ -150,6 +169,7 @@ Test totals are evidence from named runs, not invented status indicators.
 | Path | Responsibility |
 | --- | --- |
 | `traceroot/autonomous_monitor.py` | Telemetry, detection, correlation, deduplication, audit handoff |
+| `traceroot/orchestrator/` | Explicit LangGraph, CrewAI, and AutoGen selection over one bounded core |
 | `traceroot/agents/` | Three AI roles plus deterministic approval, execution, and verification components |
 | `traceroot/agents/staging_deployer.py` | Approval-bound Azure staging deployment and failure containment |
 | `traceroot/runtime_connectors.py` | Credential-reference gateway and redaction |

@@ -41,7 +41,9 @@ function render() {
   $('#d-summary').innerHTML = incident ? [
     ['Repository', incident.repository], ['Incident', incident.id], ['Description', incident.report],
     ['Reproduction', incident.reproduction_command || 'Automatic bounded test selection'],
-    ['Environment', incident.runtime || 'Isolated Docker'], ['Run', run.run_id || 'Not started'],
+    ['Environment', incident.runtime || 'Isolated Docker'],
+    ['Orchestrator', incident.orchestrator || run.summary?.orchestrator || 'langgraph'],
+    ['Run', run.run_id || 'Not started'],
   ].map(([k, v]) => '<span>' + k + '</span><span>' + esc(v) + '</span>').join('') :
     '<p class="small">Save an incident or start an investigation.</p>';
   $('#d-stages').innerHTML = stages.map((s, i) =>
@@ -119,7 +121,9 @@ function renderRight() {
   } else if (tab === 'runtime') {
     el.innerHTML = '<h3>Runtime session</h3><pre class="public-json">' + json({
       mode: state.incident?.runtime || 'Docker', session: state.run.session || null,
-      status: state.run.status || 'Not started', deployed_runtime_verified: false
+      status: state.run.status || 'Not started',
+      orchestrator: state.incident?.orchestrator || state.run.summary?.orchestrator || 'langgraph',
+      deployed_runtime_verified: false
     }) + '</pre>';
   } else if (tab === 'tools') {
     el.innerHTML = state.events.filter(e => e.type.startsWith('tool.')).map(e =>
@@ -257,6 +261,19 @@ export async function initializeWorkspace() {
   form.elements.runtime.disabled = true;
   form.elements.runtime.placeholder = 'Deployed runtime connector not configured';
   form.elements.runtime.title = 'Local Docker investigation is available. Deployed targets are not wired yet.';
+  try {
+    const capabilities = await request('/api/capabilities');
+    const select = form.elements.orchestrator;
+    for (const option of select.options) {
+      const backend = capabilities.orchestrators?.find(item => item.id === option.value);
+      option.disabled = backend ? !backend.available : option.value !== 'langgraph';
+      if (backend && !backend.available) option.textContent += ' — package not installed';
+    }
+    $('#d-orchestrator-status').textContent = 'Available: ' +
+      (capabilities.orchestrators || []).filter(item => item.available).map(item => item.label).join(', ');
+  } catch (error) {
+    $('#d-orchestrator-status').textContent = 'Could not load orchestrator capabilities.';
+  }
   for (const name of ['pause', 'resume', 'stop', 'plan', 'execute'])
     all('#d-' + name + ', #d-tb-' + name).forEach(b => b.onclick = () => invoke(name));
   $('#d-start-saved').onclick = () => invoke('runs');

@@ -43,10 +43,25 @@ The Auditor returned **SUPPORTED** with two citations: the application-level `su
 
 The approval-bound remediation was then evaluated entirely in disposable Docker. Low-confidence grade-band resolution improved from **0/3 at baseline**, to **1/3 after the first approved patch**, to **3/3 after the final approved correction**. Deterministic verification returned `FIX_VERIFIED`: all **49 focused classification tests passed**, and the broader unit suite reported **429 passed, 1 skipped, 0 failed**.
 
-The exact verified recovery is committed as `530cf31` on
+The exact recovery line is committed through `054a2ad` on
 `traceroot/b57b4ab4fc21-grade-band-recovery` and published to GitHub. No PR
 was created and production was not changed. The persistent monitor is running
 against Azure and currently reports a healthy deployment with no new signals.
+
+### Staging recovery follow-up — 29 September 2026
+
+The immutable replay artifact was deployed to the separate
+`eduforge-ai-staging` Web App. The physics quality job completed **10/10 stages**
+at **100%**, produced package `a04cca51-1c4d-4a06-aa71-55583e75b8dd`, and used
+zero live-model tokens at zero model cost. The classification evaluation remains
+**3/3**, compared with **0/3** at baseline, and the current EduForge unit suite
+passes **433/433**.
+
+The staging job's terminal state was `succeeded_partial`, not `succeeded`,
+because generic replay outputs intentionally exercised degraded fallback paths
+and emitted non-fatal warnings. TraceRoot therefore records the classification
+recovery as verified but does **not** claim a clean end-to-end staging recovery.
+Staging was stopped after verification; production remained unchanged.
 
 ## Architecture
 
@@ -158,8 +173,8 @@ python3 -m traceroot approval-ui --session SESSION --patch-file PATCH --investig
 ## Verification
 
 - Monitor plus workspace/recovery integration: **32 tests passed** before watched-job support.
-- Repository regression run: **169 passed, 5 skipped**.
-- One environment-only failure remained because `google.genai` was absent from the active interpreter.
+- Current TraceRoot regression run: **183 passed, 5 skipped**.
+- Selectable orchestrator and workspace integration: **17 passed**.
 - Real Docker remediation previously completed with exact approval, policy validation, passing reproduction and regression, approval consumption, and sandbox destruction.
 
 Test totals are evidence from named runs, not invented status indicators.
@@ -189,11 +204,9 @@ Test totals are evidence from named runs, not invented status indicators.
 - EduForge metrics currently reset on application restart.
 - Staging failure containment stops the isolated slot; immutable artifact
   rollback history is not yet implemented.
-- The isolated `eduforge-ai-staging` Web App was created with the bounded replay
-  profile. The corrected Azure deployment and runtime health checks succeeded.
-  The staging classification job reached the repaired checkpoint but replay
-  verification stopped on a missing cassette, so staging quality recovery is
-  not yet claimed.
+- The isolated `eduforge-ai-staging` Web App completed every pipeline stage and
+  produced a package, but deterministic replay fallback warnings yielded
+  `succeeded_partial`; clean end-to-end staging recovery is not claimed.
 - Production promotion is intentionally not implemented.
 
 TraceRoot favors evidence over confident prose, explicit contracts over unrestricted tools, and recoverable execution over direct production mutation. Missing evidence produces `INSUFFICIENT`, not a plausible story.

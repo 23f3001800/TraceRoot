@@ -1,0 +1,23 @@
+{
+  "artifact_sha256": "5a74a60a1b26668bcb07e22e7012698e1fd79e5177c978cc43192ede573f5ac5",
+  "azure_deployment_id": "07d2825e-c754-4b66-b5f4-5d9b83e9d2e5",
+  "commit": "054a2add3fa0d5a6d87c2c3cadd31282f3346303",
+  "classification_quality": {
+    "baseline": {"passed": 0, "total": 3, "accuracy": 0.0},
+    "recovered": {"passed": 3, "total": 3, "accuracy": 1.0}
+  },
+  "quality_job": {
+    "job_id": "8e5519c1-9989-4b63-abd8-61d6f6446086",
+    "package_id": "a04cca51-1c4d-4a06-aa71-55583e75b8dd",
+    "status": "succeeded_partial",
+    "progress": 100,
+    "completed_stages": 10,
+    "tokens": 0,
+    "cost_usd": 0.0
+  },
+  "classification_recovery_verified": true,
+  "clean_pipeline_status_verified": false,
+  "limitation": "All stages completed and a package was produced, but deterministic replay fallback warnings kept the terminal state at succeeded_partial.",
+  "contained": true,
+  "production_changed": false
+}

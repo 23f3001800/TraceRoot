@@ -86,9 +86,7 @@ The monitor container setup is in [deploy/monitor/README.md](deploy/monitor/READ
 
 The staging UI is deployed at [traceroot-staging-ui.azurewebsites.net](https://traceroot-staging-ui.azurewebsites.net/). Microsoft Entra authentication protects its API.
 
-The frontend now sends a browser to Microsoft sign-in when an API call returns 401. That fix must be deployed before it is visible on the Azure site.
-
-The hosted workspace still uses files inside one container. It is useful for staging and demonstration, but it is not durable multi-replica storage.
+Browser requests are redirected to Microsoft sign-in. API clients receive 401 until they authenticate. The hosted workspace still uses files inside one container, so it is suitable for staging but is not durable multi-replica storage.
 
 ## Safety boundaries
 

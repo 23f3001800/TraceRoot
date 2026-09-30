@@ -12,7 +12,13 @@ async function request(path, data) {
   const response = await fetch(path, data === undefined ? {} : {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
   });
-  const result = await response.json();
+  if (response.status === 401) {
+    const destination = encodeURIComponent(location.pathname + location.search);
+    location.assign('/.auth/login/aad?post_login_redirect_uri=' + destination);
+    throw new Error('Sign-in required. Redirecting to Microsoft.');
+  }
+  const contentType = response.headers.get('content-type') || '';
+  const result = contentType.includes('application/json') ? await response.json() : {};
   if (!response.ok) throw new Error(result.message || 'Request failed');
   return result;
 }
@@ -360,10 +366,14 @@ export async function initializeWorkspace() {
     };
   });
   render();
+  $('#d-stream').textContent = 'Loading workspace...';
   try {
     const data = await request('/api/incidents');
     if (data.items.length) await selectIncident(data.items[0].id);
-    else $('#d-stream').textContent = 'No incident selected';
+    else {
+      $('#d-stream').textContent = 'Ready';
+      notice('No incidents yet. Choose New incident to start an investigation.');
+    }
   } catch (e) { notice(e.message, true); }
   window.addEventListener('beforeunload', () => stream?.close());
 }

@@ -11,7 +11,7 @@ function buildApp() {
         <b id="d-title">No active investigation</b>
         <div class="sub" id="d-repo">Start an incident to begin</div>
       </div>
-      <span class="chip" id="d-chip">Ready</span>
+      <span class="chip" id="d-chip">No run</span>
       <span class="elapsed" id="d-elapsed"></span>
       <div class="controls">
         <button class="toolbtn" id="d-pause">\u23F8 Pause</button>
@@ -57,7 +57,7 @@ function buildApp() {
 
       <section class="card">
         <div class="timelinehead">
-          <h2>Live investigation timeline <span class="stream" id="d-stream">Connecting...</span></h2>
+          <h2>Investigation timeline <span class="stream" id="d-stream">Loading workspace...</span></h2>
           <div class="tl-actions">
             <button class="toolbtn" id="d-filters">\u{1F50D} Filters</button>
             <button class="toolbtn" id="d-compact">\u2630 Compact</button>

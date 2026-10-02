@@ -29,8 +29,10 @@ The approved remediation was tested in disposable Docker environments:
 | Check | Before | After |
 | --- | ---: | ---: |
 | Grade-band classification cases | 0/3 | 3/3 |
-| Focused classification tests |  | 49 passed |
-| EduForge unit tests |  | 433 passed |
+| Focused classification tests | — | 49 passed |
+| EduForge unit tests | — | 429 passed, 1 skipped |
+
+These counts come from the committed [verification receipt](artifacts/incidents/b57b4ab4fc21/verification-v3.json). They describe one controlled incident, not a general recovery success rate.
 
 The recovery branch is `traceroot/b57b4ab4fc21-grade-band-recovery` at commit `054a2ad`.
 
@@ -125,3 +127,4 @@ Browser requests are redirected to Microsoft sign-in. API clients receive 401 un
 The detailed engineering backlog is in [docs/limitations-roadmap.md](docs/limitations-roadmap.md).
 
 Licensed under [LICENSE](LICENSE).
+

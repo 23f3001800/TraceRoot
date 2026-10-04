@@ -1,0 +1,64 @@
+{
+  "action_sha256": "91e79c329ca7fb4c1f38bc066f73849a98ffe6ef442223e0d20d2f75c84f2da8",
+  "approval_status": "CONSUMED",
+  "contained": true,
+  "healthz": {
+    "status": "ok"
+  },
+  "production_changed": false,
+  "quality_job": {
+    "completed_stages": [
+      "activity-generation",
+      "assessment-generation",
+      "document-intelligence",
+      "educational-classification",
+      "gap-analysis",
+      "knowledge-extraction",
+      "lesson-generation",
+      "publishing",
+      "teaching-planner",
+      "validation"
+    ],
+    "created_at": "2026-10-03T08:03:21.027839+00:00",
+    "current_stage": "publishing",
+    "document_id": "fd7ad7f2-4254-43a9-8980-d37a26f3e9ee",
+    "error": null,
+    "finished_at": "2026-10-03T08:03:30.274198+00:00",
+    "job_id": "54fcb70e-a660-425a-81e8-83286c35c3f0",
+    "package_id": "4a363212-a20d-4ab3-91ef-2a1022af7230",
+    "progress": 100,
+    "status": "succeeded_partial",
+    "usage": {
+      "cost_usd": 0.0,
+      "tokens": 0
+    },
+    "warnings": [
+      "document-intelligence: 1 equations detected",
+      "educational-classification: low confidence: grade_band",
+      "lesson-generation: period 1: lesson core degraded; script rebuilt from plan",
+      "lesson-generation: period 1: lesson close degraded; checks derived from objectives",
+      "lesson-generation: period 1: teacher script was empty; rebuilt from the plan's time allocation",
+      "lesson-generation: period 1: entry ticket was empty; derived from the period's concepts",
+      "lesson-generation: period 1: exit ticket was empty; derived from the period's objectives",
+      "lesson-generation: period 1: no usable checkpoint question; derived from the period's objectives",
+      "lesson-generation: period 1: homework was empty; derived from the period's objectives",
+      "lesson-generation: period 1: mentor moment was empty; a placeholder was derived from the topic",
+      "lesson-generation: period 1: blackboard notes were empty; derived from the period's concepts",
+      "activity-generation: act_p1_1: activity generation degraded",
+      "activity-generation: act_p1_1: teacher instructions were empty; a minimal runnable sequence was derived",
+      "activity-generation: act_p1_1: success criteria were empty; derived from the activity's concepts",
+      "activity-generation: act_p1_1: differentiation was incomplete; a derived scaffold was substituted",
+      "gap-analysis: gap_01: gap analysis degraded",
+      "gap-analysis: gap_02: gap analysis degraded",
+      "gap-analysis: gap_01: dropped \u2014 no diagnostic question, which is the point of a gap entry",
+      "gap-analysis: gap_02: dropped \u2014 no misconception statement"
+    ]
+  },
+  "readyz": {
+    "llm_profile": "ci",
+    "schema_version": "1.0.0",
+    "status": "ok"
+  },
+  "staging_state_after": "Stopped",
+  "status": "QUALITY_INSPECTED"
+}

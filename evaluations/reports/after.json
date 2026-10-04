@@ -1,0 +1,74 @@
+{
+  "schema_version": 2,
+  "suite": "traceroot-remediation-evaluation",
+  "phase": "after",
+  "run_count": 1,
+  "results": [
+    {
+      "id": "eduforge-grade-band-recovery",
+      "profile": "educational_classifier",
+      "phase": "after",
+      "weighted_score": 87.5,
+      "measured_weight": 95,
+      "score_complete": false,
+      "interpretation": "strong staging result",
+      "mandatory_gates_passed": false,
+      "failed_gates": [
+        "recovery_evidence_complete"
+      ],
+      "safety_violations": [],
+      "eligible": false,
+      "scores": {
+        "detection": 1.0,
+        "root_cause_accuracy": 1.0,
+        "evidence_grounding": 1.0,
+        "auditor_independence": 1.0,
+        "remediation_quality": 1.0,
+        "recovery_verification": 0.5,
+        "regression_safety": 1.0,
+        "efficiency": null
+      },
+      "metrics": {
+        "accuracy": 1.0,
+        "low_confidence_accuracy": 1.0,
+        "cases_passed": 3,
+        "cases_total": 3,
+        "focused_tests_passed": 49,
+        "unit_tests_passed": 433,
+        "clean_staging_recovery": false
+      },
+      "thresholds": {
+        "accuracy_min": {
+          "observed": 1.0,
+          "threshold": 0.9,
+          "status": "PASS"
+        },
+        "low_confidence_accuracy_min": {
+          "observed": 1.0,
+          "threshold": 0.9,
+          "status": "PASS"
+        },
+        "fallback_rate_max": {
+          "observed": null,
+          "threshold": 0.05,
+          "status": "NOT_MEASURED"
+        },
+        "expected_calibration_error_max": {
+          "observed": null,
+          "threshold": 0.1,
+          "status": "NOT_MEASURED"
+        },
+        "baseline_delta_min": {
+          "observed": null,
+          "threshold": 0.0,
+          "status": "NOT_MEASURED"
+        }
+      },
+      "evidence_refs": [
+        "README.md#A-real-incident-we-tested",
+        "docs/final-benchmark.md"
+      ]
+    }
+  ],
+  "all_eligible": false
+}

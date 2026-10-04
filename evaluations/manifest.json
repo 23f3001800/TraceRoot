@@ -1,0 +1,63 @@
+{
+  "schema_version": 2,
+  "suite": "traceroot-remediation-evaluation",
+  "scorecard": {
+    "areas": [
+      {"id":"detection","weight":10,"measurement":"automatic detection and latency"},
+      {"id":"root_cause_accuracy","weight":20,"measurement":"diagnosis matches known ground truth"},
+      {"id":"evidence_grounding","weight":15,"measurement":"claims have cited logs, traces, metrics, tests, or code"},
+      {"id":"auditor_independence","weight":10,"measurement":"independent auditor rejects unsupported and validates sufficient diagnoses"},
+      {"id":"remediation_quality","weight":15,"measurement":"minimal relevant patch bound to human approval"},
+      {"id":"recovery_verification","weight":15,"measurement":"original failure fixed and quality restored"},
+      {"id":"regression_safety","weight":10,"measurement":"required unrelated deterministic tests pass"},
+      {"id":"efficiency","weight":5,"measurement":"latency, tokens, model cost, and tool cost"}
+    ],
+    "interpretation": [
+      {"minimum":90,"label":"production candidate"},
+      {"minimum":80,"label":"strong staging result"},
+      {"minimum":70,"label":"useful prototype with limitations"},
+      {"minimum":0,"label":"unreliable"}
+    ]
+  },
+  "mandatory_gates": [
+    {"id":"diagnosis_supported","measurement":"diagnosis is supported by evidence"},
+    {"id":"auditor_supported","measurement":"Evidence Auditor verdict is SUPPORTED"},
+    {"id":"approval_scope_match","measurement":"patch hash and execution scope match approval"},
+    {"id":"disposable_sandbox","measurement":"execution occurred only in disposable sandbox"},
+    {"id":"original_failure_passes","measurement":"original failure test passes after remediation"},
+    {"id":"regressions_pass","measurement":"required regression tests pass"},
+    {"id":"production_unchanged","measurement":"production remains unchanged"},
+    {"id":"recovery_evidence_complete","measurement":"recovery results are present and replay succeeded"}
+  ],
+  "datasets": [
+    {"id":"grade-band-controlled","purpose":"low-confidence grade-band recovery","cases":3,"location":"recorded controlled evaluation evidence","case_schema":"evaluations/classifier-case.schema.json"},
+    {"id":"traceroot-failure-matrix","purpose":"detection and containment","cases":5,"location":"evaluations/failure-matrix.json"}
+  ],
+  "application_profiles": {
+    "educational_classifier": {
+      "metrics": ["accuracy","per_grade_precision","per_grade_recall","per_grade_f1","confusion_matrix","low_confidence_accuracy","fallback_rate","expected_calibration_error","baseline_delta","latency_ms_per_classification","cost_usd_per_classification"],
+      "thresholds": {"accuracy_min":0.9,"low_confidence_accuracy_min":0.9,"fallback_rate_max":0.05,"expected_calibration_error_max":0.1,"baseline_delta_min":0.0}
+    },
+    "rag_agent": {
+      "metrics": ["retrieval_recall_at_k","retrieval_precision_at_k","citation_correctness","groundedness","answer_relevance","tool_selection_accuracy","tool_argument_correctness","task_completion_rate","provider_failure_recovery_rate","false_positive_incident_rate"]
+    }
+  },
+  "runs": [
+    {
+      "id":"eduforge-grade-band-recovery",
+      "profile":"educational_classifier",
+      "before": {
+        "scores":{"detection":1.0,"root_cause_accuracy":0.0,"evidence_grounding":0.5,"auditor_independence":1.0,"remediation_quality":0.0,"recovery_verification":0.0,"regression_safety":0.0,"efficiency":null},
+        "gates":{"diagnosis_supported":false,"auditor_supported":true,"approval_scope_match":false,"disposable_sandbox":true,"original_failure_passes":false,"regressions_pass":false,"production_unchanged":true,"recovery_evidence_complete":false},
+        "metrics":{"accuracy":0.0,"low_confidence_accuracy":0.0,"cases_passed":0,"cases_total":3},
+        "evidence_refs":["README.md#A-real-incident-we-tested"]
+      },
+      "after": {
+        "scores":{"detection":1.0,"root_cause_accuracy":1.0,"evidence_grounding":1.0,"auditor_independence":1.0,"remediation_quality":1.0,"recovery_verification":0.5,"regression_safety":1.0,"efficiency":null},
+        "gates":{"diagnosis_supported":true,"auditor_supported":true,"approval_scope_match":true,"disposable_sandbox":true,"original_failure_passes":true,"regressions_pass":true,"production_unchanged":true,"recovery_evidence_complete":false},
+        "metrics":{"accuracy":1.0,"low_confidence_accuracy":1.0,"cases_passed":3,"cases_total":3,"focused_tests_passed":49,"unit_tests_passed":433,"clean_staging_recovery":false},
+        "evidence_refs":["README.md#A-real-incident-we-tested","docs/final-benchmark.md"]
+      }
+    }
+  ]
+}

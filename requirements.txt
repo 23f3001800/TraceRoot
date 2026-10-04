@@ -5,3 +5,7 @@ langgraph==1.2.11
 websockets==16.1.1
 crewai==1.15.22
 autogen-agentchat==0.7.5
+psycopg[binary]==3.2.10
+opentelemetry-api==1.37.0
+opentelemetry-sdk==1.37.0
+opentelemetry-exporter-otlp-proto-http==1.37.0

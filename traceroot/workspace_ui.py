@@ -22,7 +22,8 @@ from .workspace_metrics import usage_metrics, validate_pricing
 
 class WorkspaceAPI:
     def __init__(self, root):
-        self.store = IncidentStore(root)
+        from .durable_state import configured_store
+        self.store = configured_store(root)
         self.active_runs = ActiveRuns(self.store.root)
         self._actions = threading.RLock()
 

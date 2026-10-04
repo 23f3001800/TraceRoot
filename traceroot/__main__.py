@@ -73,11 +73,11 @@ def main():
             from .autonomous_monitor import AutonomousMonitor, EduForgeTelemetryClient, MonitorConfig
             from .llms.config import LLMConfig
             from .llms.provider import load_provider
-            from .workspace_events import IncidentStore
+            from .durable_state import configured_store
             config = MonitorConfig(args.name, args.url, args.repository,
                                    watched_job_ids=tuple(args.job_id))
             service = AutonomousMonitor(config, EduForgeTelemetryClient(config),
-                IncidentStore(args.workspace_dir.resolve()), args.state_file.resolve(),
+                configured_store(args.workspace_dir.resolve()), args.state_file.resolve(),
                 load_provider(args.env_file, LLMConfig(max_tokens=1024, temperature=0.1,
                                                        thinking_budget=0,
                                                        max_transient_retries=0)))

@@ -50,7 +50,8 @@ def prepare_repository(item, root):
 def investigate(root, iid, resume=False):
     from .docker_runtime import prepare
     from .orchestrator import run_investigation
-    store, runs = IncidentStore(root), ActiveRuns(root)
+    from .durable_state import configured_store
+    store, runs = configured_store(root), ActiveRuns(root)
     item = store.get(iid)
     emit = lambda kind, **data: store._emit(kind, data, iid)
     model = provider(root)
@@ -93,7 +94,8 @@ def plan(root, iid):
     from .agents.patch_policy import validate_patch
     from .agents.approval import patch_hash
     from .agents.schemas import obj, array, string, validate
-    store, runs = IncidentStore(root), ActiveRuns(root)
+    from .durable_state import configured_store
+    store, runs = configured_store(root), ActiveRuns(root)
     record = runs._record(iid)
     context = Context.load(Path(record["session"]))
     state = json.loads(checkpoint_path(record).read_text())
@@ -154,7 +156,8 @@ def execute(root, iid):
     from .agents.verifier import verify_remediation
     from .agents.approval import load_approval, patch_hash
     from .selection import reproduction_args, select
-    store, runs = IncidentStore(root), ActiveRuns(root)
+    from .durable_state import configured_store
+    store, runs = configured_store(root), ActiveRuns(root)
     record = runs._record(iid)
     context = Context.load(Path(record["session"]))
     state = json.loads(checkpoint_path(record).read_text())
@@ -195,7 +198,8 @@ def main():
     p.add_argument("--incident", required=True)
     p.add_argument("--action", choices=["investigate", "resume", "plan", "execute"], required=True)
     args = p.parse_args()
-    store, runs = IncidentStore(args.root), ActiveRuns(args.root)
+    from .durable_state import configured_store
+    store, runs = configured_store(args.root), ActiveRuns(args.root)
     with (args.root / f".job-{args.incident}.lock").open("a") as lock:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)

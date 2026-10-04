@@ -1,0 +1,7 @@
+{"schema_version":1,"failures":[
+  {"id":"model-quality","inject":"low-confidence structured classification","expected_signal":"model","expected_outcome":"audited remediation proposal","containment":"no automatic write"},
+  {"id":"provider-outage","inject":"provider unavailable","expected_signal":"provider","expected_outcome":"provider failure recorded","containment":"bounded retry budget"},
+  {"id":"tool-timeout","inject":"tool exceeds deadline","expected_signal":"tool","expected_outcome":"tool execution failure","containment":"process group terminated"},
+  {"id":"application-error","inject":"terminal failed job","expected_signal":"application","expected_outcome":"incident opened","containment":"approval required"},
+  {"id":"runtime-unhealthy","inject":"health or readiness non-ok","expected_signal":"runtime","expected_outcome":"incident opened","containment":"staging isolated"}
+]}

@@ -1,0 +1,16 @@
+{
+  "action_sha256": "a48c0a1faa7174f198278127823e03de90e780d4f298c11978994aebea516dd9",
+  "approval_status": "CONSUMED",
+  "contained": true,
+  "http_status": 404,
+  "job": {
+    "error": {
+      "code": "job_not_found",
+      "message": "The requested resource was not found.",
+      "trace_id": "3484ad68d550"
+    }
+  },
+  "production_changed": false,
+  "staging_state_after": "Stopped",
+  "status": "INSPECTED"
+}

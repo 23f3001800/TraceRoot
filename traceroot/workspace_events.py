@@ -23,6 +23,7 @@ class IncidentStore:
         self.journal = self.root / "events.jsonl"
 
     def _emit(self, event_type, data, investigation_id=None, stage=None):
+        from .telemetry import add_event
         iid = investigation_id or data.get("incident_id") or data.get("investigation_id") or data.get("run_id") or "workspace"
         valid_id(iid)
         with (self.root / ".events.lock").open("a") as lock:
@@ -38,6 +39,7 @@ class IncidentStore:
                 stream.flush()
                 import os
                 os.fsync(stream.fileno())
+            add_event(event_type, {"traceroot.investigation_id":iid, "traceroot.stage":event["stage"]})
             return event
 
     def replay(self, after="", investigation_id=None):
@@ -105,7 +107,8 @@ class WorkspaceProgress:
              "investigate_missing_evidence": "Investigation", "finalize": "PR / Report"}
 
     def __init__(self, root, investigation_id=None):
-        self.store = IncidentStore(root)
+        from .durable_state import configured_store
+        self.store = configured_store(root)
         self.investigation_id = investigation_id
         self.run_id = None
 

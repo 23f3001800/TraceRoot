@@ -1,0 +1,46 @@
+{
+  "action_sha256": "da3abfb9955ce4ca952fedfaace349d4264f0059b9917174f8826f4c5dc66401",
+  "approval_status": "CONSUMED",
+  "contained": true,
+  "healthz": {
+    "status": "ok"
+  },
+  "production_changed": false,
+  "quality_job": {
+    "completed_stages": [
+      "activity-generation",
+      "assessment-generation",
+      "document-intelligence",
+      "educational-classification",
+      "gap-analysis",
+      "knowledge-extraction",
+      "lesson-generation",
+      "publishing",
+      "teaching-planner",
+      "validation"
+    ],
+    "created_at": "2026-10-03T13:23:44.972191+00:00",
+    "current_stage": "publishing",
+    "document_id": "4251a1c4-d6f5-426e-8ffd-3835817c622a",
+    "error": null,
+    "finished_at": "2026-10-03T13:23:53.738546+00:00",
+    "job_id": "ca025e70-6171-44cb-b846-c934cbf2eda5",
+    "package_id": "3bbd57ef-bb89-49b5-a240-b8925b5b925c",
+    "progress": 100,
+    "status": "succeeded_partial",
+    "usage": {
+      "cost_usd": 0.0,
+      "tokens": 0
+    },
+    "warnings": [
+      "document-intelligence: 1 equations detected"
+    ]
+  },
+  "readyz": {
+    "llm_profile": "ci",
+    "schema_version": "1.0.0",
+    "status": "ok"
+  },
+  "staging_state_after": "Stopped",
+  "status": "QUALITY_INSPECTED"
+}

@@ -225,9 +225,11 @@ class AutonomousMonitor:
             return {}
 
     def run_once(self) -> dict[str, Any]:
+        from .telemetry import span
         prior = self._load_state()
-        snapshot = self.client.collect()
-        signals = detect(snapshot, prior.get("snapshot"))
+        with span("traceroot.monitor.poll", {"traceroot.connector":self.config.name}):
+            snapshot = self.client.collect()
+            signals = detect(snapshot, prior.get("snapshot"))
         signature = hashlib.sha256(json.dumps(signals, sort_keys=True).encode()).hexdigest() if signals else ""
         result: dict[str, Any] = {"status": "healthy" if not signals else "detected",
                                   "signals": signals, "snapshot": snapshot}

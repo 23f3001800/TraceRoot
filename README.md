@@ -4,7 +4,14 @@ TraceRoot watches an AI application, opens an incident when it sees a meaningful
 
 It is built around a simple rule: investigation can be automatic, but changes are not. Reading logs, code, configuration, tests, and database metadata is allowed. Applying a patch, committing it, or deploying it requires an explicit approval tied to the exact change.
 
-![TraceRoot incident workspace](docs/images/traceroot-home.png)
+[![Animated TraceRoot recovery pipeline](docs/images/traceroot-pipeline.svg)](docs/images/traceroot-pipeline.svg)
+
+> **Interactive view:** select the diagram to open it directly, then hover or
+> focus a stage and follow its link to the implementation or evidence. Motion
+> respects the operating system's reduced-motion preference.
+
+TraceRoot has **three AI roles**—Investigator, Evidence Auditor, and Remediation
+Planner. The other blocks are deterministic safety and delivery components.
 
 ## What works today
 
@@ -122,7 +129,14 @@ Browser requests are redirected to Microsoft sign-in. API clients receive 401 un
 - A clean `succeeded` staging quality run without replay fallback warnings.
 - First-class distributed traces for model, RAG, and tool operations.
 - Broader evaluation across several applications and failure types.
-- Production promotion and rollback automation.
+
+## Operational extensions
+
+- `TRACEROOT_DATABASE_URL=postgresql://...` enables PostgreSQL-backed incident and event state; local files remain the development default.
+- `OTEL_EXPORTER_OTLP_ENDPOINT=https://...` enables OTLP traces for monitor polls and workspace events.
+- Approved staging remediation can run as an immutable Azure Container Apps Job through `traceroot.agents.azure_job_executor`.
+- The controlled evaluation manifest and generated before/after evidence live under `evaluations/`; the compact result is in `docs/benchmark-report.md`.
+- `.github/workflows/azure-staging.yml` verifies, deploys staging, probes health, rolls back failures, and uses the protected `production` environment for manual promotion approval.
 
 The detailed engineering backlog is in [docs/limitations-roadmap.md](docs/limitations-roadmap.md).
 

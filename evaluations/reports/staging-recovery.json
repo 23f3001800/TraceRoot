@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "recovery_evidence_complete": false,
+  "checks": {
+    "terminal_status_succeeded": false,
+    "all_stages_completed": true,
+    "package_created": true,
+    "zero_fallback_warnings": false,
+    "expected_grade_band": false,
+    "production_unchanged": true,
+    "replay_succeeded": false
+  },
+  "failed_checks": [
+    "terminal_status_succeeded",
+    "zero_fallback_warnings",
+    "expected_grade_band",
+    "replay_succeeded"
+  ],
+  "job_id": "ca025e70-6171-44cb-b846-c934cbf2eda5",
+  "package_id": "3bbd57ef-bb89-49b5-a240-b8925b5b925c",
+  "grade_band": null
+}

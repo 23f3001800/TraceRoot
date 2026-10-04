@@ -1,0 +1,63 @@
+name: Azure staging delivery
+on:
+  workflow_dispatch:
+    inputs:
+      image_digest:
+        description: Immutable image digest (sha256:...)
+        required: true
+      promote_production:
+        description: Request separately approved production promotion
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  id-token: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      - run: python scripts/evaluation_report.py
+      - run: git diff --exit-code evaluations/reports
+  staging:
+    needs: verify
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      revision: ${{ steps.deploy.outputs.revision }}
+    steps:
+      - uses: azure/login@v2
+        with: {client-id: "${{ secrets.AZURE_CLIENT_ID }}", tenant-id: "${{ secrets.AZURE_TENANT_ID }}", subscription-id: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"}
+      - id: previous
+        run: echo "revision=$(az containerapp revision list -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.STAGING_APP }}' --query '[?properties.active].name|[0]' -o tsv)" >> "$GITHUB_OUTPUT"
+      - id: deploy
+        run: |
+          IMAGE_DIGEST='${{ inputs.image_digest }}'
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          az containerapp update -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.STAGING_APP }}' --image '${{ vars.ACR_SERVER }}/traceroot@${{ inputs.image_digest }}' --revision-suffix "gh-${GITHUB_RUN_ID}" --output none
+          echo "revision=$(az containerapp revision list -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.STAGING_APP }}' --query 'sort_by([], &properties.createdTime)[-1].name' -o tsv)" >> "$GITHUB_OUTPUT"
+      - id: health
+        continue-on-error: true
+        run: |
+          for attempt in $(seq 1 12); do curl --fail --silent --show-error '${{ vars.STAGING_HEALTH_URL }}' && exit 0; sleep 10; done
+          exit 1
+      - name: Roll back unhealthy staging revision
+        if: steps.health.outcome != 'success'
+        run: |
+          az containerapp ingress traffic set -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.STAGING_APP }}' --revision-weight '${{ steps.previous.outputs.revision }}=100'
+          az containerapp revision deactivate -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.STAGING_APP }}' --revision '${{ steps.deploy.outputs.revision }}'
+          exit 1
+  production:
+    if: inputs.promote_production
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: azure/login@v2
+        with: {client-id: "${{ secrets.AZURE_CLIENT_ID }}", tenant-id: "${{ secrets.AZURE_TENANT_ID }}", subscription-id: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"}
+      - run: az containerapp update -g '${{ vars.AZURE_RESOURCE_GROUP }}' -n '${{ vars.PRODUCTION_APP }}' --image '${{ vars.ACR_SERVER }}/traceroot@${{ inputs.image_digest }}' --output none
+      - run: curl --retry 12 --retry-all-errors --retry-delay 10 --fail '${{ vars.PRODUCTION_HEALTH_URL }}'
